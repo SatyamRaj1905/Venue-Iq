@@ -1,12 +1,8 @@
-import { scenarioOptions, type ScenarioId } from "@/lib/content/scenarioOptions";
+import { isScenarioId, type ScenarioId } from "@/lib/domain/constants";
 
 export const SHARED_SCENARIO_STORAGE_KEY = "venueiq:shared-scenario:v1";
 export const SHARED_SCENARIO_EVENT = "venueiq:shared-scenario-changed";
 export const defaultSharedScenario: ScenarioId = "normal";
-
-function isScenarioId(value: unknown): value is ScenarioId {
-  return typeof value === "string" && scenarioOptions.some((option) => option.id === value);
-}
 
 export function loadSharedScenario(storage?: Pick<Storage, "getItem"> | null): ScenarioId {
   if (!storage) return defaultSharedScenario;

@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { AppShell } from "@/components/layout/AppShell";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { FanCompanionClient } from "@/components/fan/FanCompanionClient";
+import "../assistant.css";
+import "./fan.css";
 
 export const metadata: Metadata = {
   title: "Fan Companion",

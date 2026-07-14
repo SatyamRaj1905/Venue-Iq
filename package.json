@@ -3,6 +3,25 @@
   "version": "1.0.0",
   "private": true,
   "description": "VenueIQ — one intelligent layer for safer, smoother, and more inclusive tournament days.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SatyamRaj1905/Venue-Iq.git"
+  },
+  "homepage": "https://github.com/SatyamRaj1905/Venue-Iq#readme",
+  "bugs": {
+    "url": "https://github.com/SatyamRaj1905/Venue-Iq/issues"
+  },
+  "keywords": [
+    "venue-intelligence",
+    "generative-ai",
+    "gemini",
+    "nextjs",
+    "accessibility",
+    "stadium-operations",
+    "hackathon"
+  ],
+  "packageManager": "npm@11.13.0",
   "engines": {
     "node": "24.x",
     "npm": ">=11.0.0"
@@ -21,10 +40,11 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:a11y": "playwright test tests/accessibility",
-    "verify": "npm run format:check && npm run lint && npm run type-check && npm run test && npm run build",
+    "bundle:check": "node scripts/check-bundle-budget.mjs",
+    "verify": "npm run format:check && npm run lint && npm run type-check && npm run test && npm run build && npm run bundle:check",
     "verify:full": "npm run verify && npm run test:e2e",
     "audit:prod": "npm audit --omit=dev",
-    "vercel-build": "npm run lint && npm run type-check && npm run test && npm run build"
+    "vercel-build": "npm run lint && npm run type-check && npm run test && npm run build && npm run bundle:check"
   },
   "dependencies": {
     "@google/genai": "2.11.0",
@@ -40,7 +60,6 @@
   "devDependencies": {
     "@axe-core/playwright": "4.12.1",
     "@playwright/test": "1.61.1",
-    "@tailwindcss/postcss": "4.3.2",
     "@testing-library/jest-dom": "6.9.1",
     "@testing-library/react": "16.3.2",
     "@testing-library/user-event": "14.6.1",
@@ -55,9 +74,7 @@
     "eslint-config-next": "16.2.10",
     "eslint-plugin-promise": "7.3.0",
     "jsdom": "29.1.1",
-    "postcss": "8.5.19",
     "prettier": "3.9.5",
-    "tailwindcss": "4.3.2",
     "typescript": "5.9.3",
     "vitest": "4.1.10"
   },

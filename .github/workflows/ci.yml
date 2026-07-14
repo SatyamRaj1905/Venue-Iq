@@ -14,7 +14,7 @@ concurrency:
 
 env:
   AI_DEMO_MODE: "true"
-  GEMINI_MODEL: gemini-2.5-flash
+  GEMINI_MODEL: gemini-3.1-flash-lite
   NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
   NEXT_TELEMETRY_DISABLED: "1"
 
@@ -49,6 +49,9 @@ jobs:
 
       - name: Build production application
         run: npm run build
+
+      - name: Enforce production bundle budgets
+        run: npm run bundle:check
 
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium

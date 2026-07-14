@@ -5,6 +5,7 @@ import {
   fanNarrativeSchema,
   operationsNarrativeSchema,
   operationsBriefSchema,
+  operationsBriefRequestSchema,
   supportedLanguageSchema,
   volunteerNarrativeSchema,
   volunteerRequestSchema,
@@ -121,6 +122,24 @@ describe("AI schemas", () => {
       simulated: true,
     });
     expect(result.success).toBe(false);
+  });
+
+  it("bounds the deterministic simulation coordinates sent for an operations brief", () => {
+    expect(
+      operationsBriefRequestSchema.safeParse({
+        scenario: "arrival-surge",
+        language: "en",
+        seed: 2_026,
+        tick: 4,
+      }).success,
+    ).toBe(true);
+    expect(
+      operationsBriefRequestSchema.safeParse({
+        scenario: "arrival-surge",
+        seed: -1,
+        tick: 10_001,
+      }).success,
+    ).toBe(false);
   });
 
   it("accepts only known volunteer roles and SOP topics", () => {

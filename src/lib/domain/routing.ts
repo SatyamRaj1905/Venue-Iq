@@ -1,4 +1,10 @@
 import { findNearbyFacilities } from "./stadiumGraph";
+import { RoutePriorityQueue } from "./routePriorityQueue";
+import {
+  calculateWalkingTime,
+  classifyRouteCrowd,
+  DEFAULT_WALKING_SPEED_METERS_PER_SECOND,
+} from "./routeTiming";
 import type {
   CrowdLevel,
   EdgeId,
@@ -12,11 +18,11 @@ import type {
   StadiumEdge,
   StadiumGraph,
   StadiumNode,
-  StadiumPathKind,
 } from "./types";
 
-const DEFAULT_WALKING_SPEED_METERS_PER_SECOND = 1.3;
 const DEFAULT_ACCESSIBLE_SPEED_METERS_PER_SECOND = 1;
+
+export { calculateWalkingTime, classifyRouteCrowd } from "./routeTiming";
 
 interface Traversal {
   readonly edge: StadiumEdge;
@@ -28,11 +34,27 @@ interface PreviousTraversal {
   readonly edgeId: EdgeId;
 }
 
-interface WalkingTimeOptions {
-  readonly speedMetersPerSecond?: number;
-  readonly crowdLevel?: CrowdLevel;
-  readonly pathKind?: StadiumPathKind;
+interface GraphIndex {
+  readonly adjacency: ReadonlyMap<NodeId, readonly Traversal[]>;
+  readonly edgeById: ReadonlyMap<EdgeId, StadiumEdge>;
+  readonly nodeById: ReadonlyMap<NodeId, StadiumNode>;
 }
+
+interface PreparedConditions {
+  readonly closedEdgeIds: ReadonlySet<EdgeId>;
+  readonly closedNodeIds: ReadonlySet<NodeId>;
+  readonly crowdByZone: RouteConditions["crowdByZone"];
+  readonly obstructedEdgeIds: ReadonlySet<EdgeId>;
+}
+
+interface RouteSearchState {
+  readonly distanceByNode: Map<NodeId, number>;
+  readonly previous: Map<NodeId, PreviousTraversal>;
+  readonly queue: RoutePriorityQueue;
+  readonly visited: Set<NodeId>;
+}
+
+const graphIndexCache = new WeakMap<StadiumGraph, GraphIndex>();
 
 function clamp(value: number, minimum: number, maximum: number): number {
   return Math.min(maximum, Math.max(minimum, value));
@@ -43,59 +65,17 @@ function round(value: number, decimalPlaces = 1): number {
   return Math.round(value * scale) / scale;
 }
 
-export function classifyRouteCrowd(occupancyPercentage: number): CrowdLevel {
-  if (occupancyPercentage >= 100) {
-    return "critical";
-  }
-  if (occupancyPercentage >= 80) {
-    return "high";
-  }
-  if (occupancyPercentage >= 55) {
-    return "moderate";
-  }
-  return "low";
-}
-
-export function calculateWalkingTime(
-  distanceMeters: number,
-  options: WalkingTimeOptions = {},
-): number {
-  if (!Number.isFinite(distanceMeters) || distanceMeters < 0) {
-    throw new RangeError("Distance must be a finite, non-negative number.");
-  }
-
-  const speed = options.speedMetersPerSecond ?? DEFAULT_WALKING_SPEED_METERS_PER_SECOND;
-  if (!Number.isFinite(speed) || speed <= 0 || speed > 3) {
-    throw new RangeError("Walking speed must be greater than 0 and at most 3 m/s.");
-  }
-
-  const crowdFactor: Readonly<Record<CrowdLevel, number>> = {
-    low: 1,
-    moderate: 0.88,
-    high: 0.7,
-    critical: 0.5,
-  };
-  const pathFactor: Readonly<Record<StadiumPathKind, number>> = {
-    walkway: 1,
-    "accessible-path": 1,
-    ramp: 0.82,
-    lift: 0.72,
-    stairs: 0.75,
-  };
-  const crowd = crowdFactor[options.crowdLevel ?? "low"];
-  const path = pathFactor[options.pathKind ?? "walkway"];
-  const liftWaitSeconds = options.pathKind === "lift" && distanceMeters > 0 ? 20 : 0;
-
-  return Math.round(distanceMeters / (speed * crowd * path) + liftWaitSeconds);
-}
-
-function buildAdjacency(graph: StadiumGraph): ReadonlyMap<NodeId, readonly Traversal[]> {
+function buildGraphIndex(graph: StadiumGraph): GraphIndex {
   const mutable = new Map<NodeId, Traversal[]>();
+  const nodeById = new Map<NodeId, StadiumNode>();
+  const edgeById = new Map<EdgeId, StadiumEdge>();
   for (const node of graph.nodes) {
     mutable.set(node.id, []);
+    nodeById.set(node.id, node);
   }
 
   for (const edge of graph.edges) {
+    edgeById.set(edge.id, edge);
     mutable.get(edge.from)?.push({ edge, toNodeId: edge.to });
     if (edge.bidirectional) {
       mutable.get(edge.to)?.push({ edge, toNodeId: edge.from });
@@ -108,12 +88,31 @@ function buildAdjacency(graph: StadiumGraph): ReadonlyMap<NodeId, readonly Trave
         left.edge.id.localeCompare(right.edge.id) || left.toNodeId.localeCompare(right.toNodeId),
     );
   }
-  return mutable;
+  return { adjacency: mutable, edgeById, nodeById };
 }
 
-function edgeCrowdPercentage(edge: StadiumEdge, conditions: RouteConditions | undefined): number {
+function getGraphIndex(graph: StadiumGraph): GraphIndex {
+  const cached = graphIndexCache.get(graph);
+  if (cached !== undefined) {
+    return cached;
+  }
+  const index = buildGraphIndex(graph);
+  graphIndexCache.set(graph, index);
+  return index;
+}
+
+function prepareConditions(conditions: RouteConditions | undefined): PreparedConditions {
+  return {
+    closedEdgeIds: new Set(conditions?.closedEdgeIds ?? []),
+    closedNodeIds: new Set(conditions?.closedNodeIds ?? []),
+    crowdByZone: conditions?.crowdByZone,
+    obstructedEdgeIds: new Set(conditions?.obstructedEdgeIds ?? []),
+  };
+}
+
+function edgeCrowdPercentage(edge: StadiumEdge, conditions: PreparedConditions): number {
   const zoneCrowd = edge.zoneIds
-    .map((zoneId) => conditions?.crowdByZone?.[zoneId])
+    .map((zoneId) => conditions.crowdByZone?.[zoneId])
     .filter((value): value is number => value !== undefined && Number.isFinite(value));
 
   if (zoneCrowd.length === 0) {
@@ -126,20 +125,24 @@ function edgeIsAvailable(
   edge: StadiumEdge,
   toNode: StadiumNode,
   preferences: RoutePreferences,
-  conditions: RouteConditions | undefined,
+  conditions: PreparedConditions,
 ): boolean {
-  const closedEdges = new Set(conditions?.closedEdgeIds ?? []);
-  const closedNodes = new Set(conditions?.closedNodeIds ?? []);
-  const obstructions = new Set(conditions?.obstructedEdgeIds ?? []);
   const avoidObstructions = preferences.avoidAccessibilityObstructions ?? true;
 
-  if (edge.status === "closed" || closedEdges.has(edge.id) || closedNodes.has(toNode.id)) {
+  if (
+    edge.status === "closed" ||
+    conditions.closedEdgeIds.has(edge.id) ||
+    conditions.closedNodeIds.has(toNode.id)
+  ) {
     return false;
   }
   if (preferences.stepFree === true && (!edge.stepFree || !toNode.accessible)) {
     return false;
   }
-  if (avoidObstructions && (edge.accessibilityObstructed || obstructions.has(edge.id))) {
+  if (
+    avoidObstructions &&
+    (edge.accessibilityObstructed || conditions.obstructedEdgeIds.has(edge.id))
+  ) {
     return false;
   }
   return true;
@@ -148,7 +151,7 @@ function edgeIsAvailable(
 function edgeWeight(
   edge: StadiumEdge,
   preferences: RoutePreferences,
-  conditions: RouteConditions | undefined,
+  conditions: PreparedConditions,
 ): number {
   let multiplier = edge.status === "restricted" ? 1.5 : 1;
   if (preferences.avoidCrowds === true) {
@@ -162,38 +165,13 @@ function edgeWeight(
   return edge.distanceMeters * multiplier;
 }
 
-function selectNextNode(
-  graph: StadiumGraph,
-  distanceByNode: ReadonlyMap<NodeId, number>,
-  visited: ReadonlySet<NodeId>,
-): NodeId | undefined {
-  let selected: NodeId | undefined;
-  let selectedDistance = Number.POSITIVE_INFINITY;
-
-  for (const node of graph.nodes) {
-    if (visited.has(node.id)) {
-      continue;
-    }
-    const distance = distanceByNode.get(node.id) ?? Number.POSITIVE_INFINITY;
-    if (
-      distance < selectedDistance ||
-      (distance === selectedDistance && selected !== undefined && node.id < selected)
-    ) {
-      selected = node.id;
-      selectedDistance = distance;
-    }
-  }
-
-  return selectedDistance === Number.POSITIVE_INFINITY ? undefined : selected;
-}
-
 function reconstructPath(
   originId: NodeId,
   destinationId: NodeId,
   previous: ReadonlyMap<NodeId, PreviousTraversal>,
 ): { readonly nodeIds: readonly NodeId[]; readonly edgeIds: readonly EdgeId[] } {
-  const nodeIds: NodeId[] = [destinationId];
-  const edgeIds: EdgeId[] = [];
+  const reverseNodeIds: NodeId[] = [destinationId];
+  const reverseEdgeIds: EdgeId[] = [];
   let current = destinationId;
 
   while (current !== originId) {
@@ -201,11 +179,13 @@ function reconstructPath(
     if (traversal === undefined) {
       return { nodeIds: [], edgeIds: [] };
     }
-    edgeIds.unshift(traversal.edgeId);
-    nodeIds.unshift(traversal.fromNodeId);
+    reverseEdgeIds.push(traversal.edgeId);
+    reverseNodeIds.push(traversal.fromNodeId);
     current = traversal.fromNodeId;
   }
-  return { nodeIds, edgeIds };
+  reverseNodeIds.reverse();
+  reverseEdgeIds.reverse();
+  return { nodeIds: reverseNodeIds, edgeIds: reverseEdgeIds };
 }
 
 function instructionForEdge(edge: StadiumEdge, toNode: StadiumNode): string {
@@ -237,32 +217,30 @@ function accessibilityNote(edge: StadiumEdge): string {
 }
 
 function createSteps(
-  graph: StadiumGraph,
+  graphIndex: GraphIndex,
   nodeIds: readonly NodeId[],
   edgeIds: readonly EdgeId[],
   preferences: RoutePreferences,
-  conditions: RouteConditions | undefined,
+  conditions: PreparedConditions,
 ): readonly RouteStep[] {
-  const nodes = new Map(graph.nodes.map((node) => [node.id, node]));
-  const edges = new Map(graph.edges.map((edge) => [edge.id, edge]));
   const speed =
     preferences.walkingSpeedMetersPerSecond ??
     (preferences.stepFree === true
       ? DEFAULT_ACCESSIBLE_SPEED_METERS_PER_SECOND
       : DEFAULT_WALKING_SPEED_METERS_PER_SECOND);
 
-  return edgeIds.map((edgeId, index) => {
-    const edge = edges.get(edgeId);
-    const fromId = nodeIds[index];
-    const toId = nodeIds[index + 1];
-    const fromNode = fromId === undefined ? undefined : nodes.get(fromId);
-    const toNode = toId === undefined ? undefined : nodes.get(toId);
+  return edgeIds.map((edgeId, stepIndex) => {
+    const edge = graphIndex.edgeById.get(edgeId);
+    const fromId = nodeIds[stepIndex];
+    const toId = nodeIds[stepIndex + 1];
+    const fromNode = fromId === undefined ? undefined : graphIndex.nodeById.get(fromId);
+    const toNode = toId === undefined ? undefined : graphIndex.nodeById.get(toId);
     if (edge === undefined || fromNode === undefined || toNode === undefined) {
       throw new Error("Route reconstruction encountered invalid graph data.");
     }
     const crowdLevel = classifyRouteCrowd(edgeCrowdPercentage(edge, conditions));
     return {
-      index: index + 1,
+      index: stepIndex + 1,
       fromNodeId: fromNode.id,
       fromName: fromNode.name,
       toNodeId: toNode.id,
@@ -311,9 +289,91 @@ function createExplanations(
   return explanations;
 }
 
+function relaxTraversal(
+  traversal: Traversal,
+  currentNodeId: NodeId,
+  currentDistance: number,
+  index: GraphIndex,
+  preferences: RoutePreferences,
+  conditions: PreparedConditions,
+  state: RouteSearchState,
+): void {
+  const toNode = index.nodeById.get(traversal.toNodeId);
+  if (
+    toNode === undefined ||
+    state.visited.has(toNode.id) ||
+    !edgeIsAvailable(traversal.edge, toNode, preferences, conditions)
+  ) {
+    return;
+  }
+
+  const candidate = currentDistance + edgeWeight(traversal.edge, preferences, conditions);
+  const known = state.distanceByNode.get(toNode.id) ?? Number.POSITIVE_INFINITY;
+  const previousEdgeId = state.previous.get(toNode.id)?.edgeId;
+  const improvesDistance = candidate < known;
+  const improvesTie =
+    candidate === known && (previousEdgeId === undefined || traversal.edge.id < previousEdgeId);
+  if (!improvesDistance && !improvesTie) {
+    return;
+  }
+
+  state.distanceByNode.set(toNode.id, candidate);
+  state.previous.set(toNode.id, {
+    fromNodeId: currentNodeId,
+    edgeId: traversal.edge.id,
+  });
+  state.queue.push({ distance: candidate, nodeId: toNode.id });
+}
+
+function searchGraph(
+  index: GraphIndex,
+  originId: NodeId,
+  destinationId: NodeId,
+  preferences: RoutePreferences,
+  conditions: PreparedConditions,
+): Readonly<{
+  distanceByNode: ReadonlyMap<NodeId, number>;
+  previous: ReadonlyMap<NodeId, PreviousTraversal>;
+}> {
+  const state: RouteSearchState = {
+    distanceByNode: new Map<NodeId, number>([[originId, 0]]),
+    previous: new Map<NodeId, PreviousTraversal>(),
+    queue: new RoutePriorityQueue(),
+    visited: new Set<NodeId>(),
+  };
+  state.queue.push({ distance: 0, nodeId: originId });
+
+  for (let current = state.queue.pop(); current !== undefined; current = state.queue.pop()) {
+    if (
+      state.visited.has(current.nodeId) ||
+      state.distanceByNode.get(current.nodeId) !== current.distance
+    ) {
+      continue;
+    }
+    if (current.nodeId === destinationId) {
+      break;
+    }
+    state.visited.add(current.nodeId);
+
+    for (const traversal of index.adjacency.get(current.nodeId) ?? []) {
+      relaxTraversal(
+        traversal,
+        current.nodeId,
+        current.distance,
+        index,
+        preferences,
+        conditions,
+        state,
+      );
+    }
+  }
+
+  return { distanceByNode: state.distanceByNode, previous: state.previous };
+}
+
 export function findRoute(graph: StadiumGraph, request: RouteRequest): RouteSearchResult {
-  const nodeById = new Map(graph.nodes.map((node) => [node.id, node]));
-  if (!nodeById.has(request.originId)) {
+  const index = getGraphIndex(graph);
+  if (!index.nodeById.has(request.originId)) {
     return {
       found: false,
       reason: "unknown-origin",
@@ -321,7 +381,7 @@ export function findRoute(graph: StadiumGraph, request: RouteRequest): RouteSear
       simulated: true,
     };
   }
-  if (!nodeById.has(request.destinationId)) {
+  if (!index.nodeById.has(request.destinationId)) {
     return {
       found: false,
       reason: "unknown-destination",
@@ -331,49 +391,14 @@ export function findRoute(graph: StadiumGraph, request: RouteRequest): RouteSear
   }
 
   const preferences = request.preferences ?? {};
-  const adjacency = buildAdjacency(graph);
-  const distanceByNode = new Map<NodeId, number>();
-  const previous = new Map<NodeId, PreviousTraversal>();
-  const visited = new Set<NodeId>();
-  for (const node of graph.nodes) {
-    distanceByNode.set(node.id, Number.POSITIVE_INFINITY);
-  }
-  distanceByNode.set(request.originId, 0);
-
-  while (visited.size < graph.nodes.length) {
-    const currentId = selectNextNode(graph, distanceByNode, visited);
-    if (currentId === undefined || currentId === request.destinationId) {
-      break;
-    }
-    visited.add(currentId);
-    const currentDistance = distanceByNode.get(currentId) ?? Number.POSITIVE_INFINITY;
-
-    for (const traversal of adjacency.get(currentId) ?? []) {
-      const toNode = nodeById.get(traversal.toNodeId);
-      if (
-        toNode === undefined ||
-        visited.has(toNode.id) ||
-        !edgeIsAvailable(traversal.edge, toNode, preferences, request.conditions)
-      ) {
-        continue;
-      }
-      const candidate =
-        currentDistance + edgeWeight(traversal.edge, preferences, request.conditions);
-      const known = distanceByNode.get(toNode.id) ?? Number.POSITIVE_INFINITY;
-      const previousEdgeId = previous.get(toNode.id)?.edgeId;
-      if (
-        candidate < known ||
-        (candidate === known &&
-          (previousEdgeId === undefined || traversal.edge.id < previousEdgeId))
-      ) {
-        distanceByNode.set(toNode.id, candidate);
-        previous.set(toNode.id, {
-          fromNodeId: currentId,
-          edgeId: traversal.edge.id,
-        });
-      }
-    }
-  }
+  const conditions = prepareConditions(request.conditions);
+  const { distanceByNode, previous } = searchGraph(
+    index,
+    request.originId,
+    request.destinationId,
+    preferences,
+    conditions,
+  );
 
   const path = reconstructPath(request.originId, request.destinationId, previous);
   if (path.nodeIds.length === 0) {
@@ -385,14 +410,12 @@ export function findRoute(graph: StadiumGraph, request: RouteRequest): RouteSear
     };
   }
 
-  const steps = createSteps(graph, path.nodeIds, path.edgeIds, preferences, request.conditions);
+  const steps = createSteps(index, path.nodeIds, path.edgeIds, preferences, conditions);
   const totalDistanceMeters = steps.reduce((total, step) => total + step.distanceMeters, 0);
   const estimatedWalkingSeconds = steps.reduce((total, step) => total + step.estimatedSeconds, 0);
   const highestCrowdPercentage = path.edgeIds.reduce((highest, edgeId) => {
-    const edge = graph.edges.find((candidate) => candidate.id === edgeId);
-    return edge === undefined
-      ? highest
-      : Math.max(highest, edgeCrowdPercentage(edge, request.conditions));
+    const edge = index.edgeById.get(edgeId);
+    return edge === undefined ? highest : Math.max(highest, edgeCrowdPercentage(edge, conditions));
   }, 0);
   const crowdLevel = classifyRouteCrowd(highestCrowdPercentage);
   const routeIsStepFree = steps.every((step) => step.stepFree);

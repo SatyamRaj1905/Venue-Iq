@@ -115,6 +115,126 @@ function PreferenceControls({
   );
 }
 
+function RouteSelectors({
+  currentLocation,
+  destination,
+  disabled,
+  onCurrentLocationChange,
+  onDestinationChange,
+}: Pick<
+  AssistanceFormProps,
+  "currentLocation" | "destination" | "onCurrentLocationChange" | "onDestinationChange"
+> & { disabled: boolean }) {
+  return (
+    <div className="form-grid form-grid--two">
+      <Select
+        id="current-location"
+        label="I am near"
+        value={currentLocation}
+        disabled={disabled}
+        onChange={(event) => onCurrentLocationChange(event.target.value)}
+      >
+        {locationNodes.map((node) => (
+          <option key={node.id} value={node.id}>
+            {node.name}
+          </option>
+        ))}
+      </Select>
+      <Select
+        id="destination"
+        label="Take me to"
+        value={destination}
+        disabled={disabled}
+        onChange={(event) => onDestinationChange(event.target.value)}
+      >
+        {destinationNodes.map((node) => (
+          <option key={node.id} value={node.id}>
+            {node.name}
+          </option>
+        ))}
+      </Select>
+    </div>
+  );
+}
+
+function FanMessageField({
+  message,
+  validationError,
+  disabled,
+  onMessageChange,
+}: Pick<AssistanceFormProps, "message" | "validationError" | "onMessageChange"> & {
+  disabled: boolean;
+}) {
+  return (
+    <label className="field" htmlFor="fan-message">
+      <span className="field__label">Ask VenueIQ</span>
+      <span className="field__hint">Mention mobility, sensory or crowd preferences.</span>
+      <span className="textarea-wrap">
+        <textarea
+          aria-describedby={
+            validationError ? "fan-message-error fan-message-count" : "fan-message-count"
+          }
+          aria-invalid={Boolean(validationError)}
+          id="fan-message"
+          maxLength={600}
+          disabled={disabled}
+          onChange={(event) => onMessageChange(event.target.value)}
+          placeholder="For example: I use a wheelchair and want the safest low-crowd route…"
+          rows={4}
+          value={message}
+        />
+        <span id="fan-message-count" className="textarea-wrap__count">
+          {message.length}/600
+        </span>
+      </span>
+      {validationError ? (
+        <span className="field__error" id="fan-message-error">
+          {validationError}
+        </span>
+      ) : null}
+    </label>
+  );
+}
+
+function AssistanceFooter({
+  language,
+  isLoading,
+  onLanguageChange,
+}: Pick<AssistanceFormProps, "language" | "isLoading" | "onLanguageChange">) {
+  return (
+    <div className="assistant-form__footer">
+      <Select
+        id="fan-language"
+        label="Response language"
+        hideLabel
+        value={language}
+        disabled={isLoading}
+        onChange={(event) => onLanguageChange(event.target.value as SupportedLanguage)}
+        aria-label="Response language"
+      >
+        {languageOptions.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.nativeLabel}
+          </option>
+        ))}
+      </Select>
+      <span className="assistant-form__language-icon" aria-hidden="true">
+        <Languages size={17} />
+      </span>
+      <Button type="submit" size="large" isLoading={isLoading}>
+        {isLoading ? (
+          "Finding route"
+        ) : (
+          <>
+            <Route size={18} aria-hidden="true" /> Find my route{" "}
+            <Send size={16} aria-hidden="true" />
+          </>
+        )}
+      </Button>
+    </div>
+  );
+}
+
 export function AssistanceForm({
   currentLocation,
   destination,
@@ -139,62 +259,20 @@ export function AssistanceForm({
     <form className="assistant-form" onSubmit={handleSubmit} noValidate>
       <AssistanceHeading />
 
-      <div className="form-grid form-grid--two">
-        <Select
-          id="current-location"
-          label="I am near"
-          value={currentLocation}
-          disabled={isLoading}
-          onChange={(event) => onCurrentLocationChange(event.target.value)}
-        >
-          {locationNodes.map((node) => (
-            <option key={node.id} value={node.id}>
-              {node.name}
-            </option>
-          ))}
-        </Select>
-        <Select
-          id="destination"
-          label="Take me to"
-          value={destination}
-          disabled={isLoading}
-          onChange={(event) => onDestinationChange(event.target.value)}
-        >
-          {destinationNodes.map((node) => (
-            <option key={node.id} value={node.id}>
-              {node.name}
-            </option>
-          ))}
-        </Select>
-      </div>
+      <RouteSelectors
+        currentLocation={currentLocation}
+        destination={destination}
+        disabled={isLoading}
+        onCurrentLocationChange={onCurrentLocationChange}
+        onDestinationChange={onDestinationChange}
+      />
 
-      <label className="field" htmlFor="fan-message">
-        <span className="field__label">Ask VenueIQ</span>
-        <span className="field__hint">Mention mobility, sensory or crowd preferences.</span>
-        <span className="textarea-wrap">
-          <textarea
-            aria-describedby={
-              validationError ? "fan-message-error fan-message-count" : "fan-message-count"
-            }
-            aria-invalid={Boolean(validationError)}
-            id="fan-message"
-            maxLength={600}
-            disabled={isLoading}
-            onChange={(event) => onMessageChange(event.target.value)}
-            placeholder="For example: I use a wheelchair and want the safest low-crowd route…"
-            rows={4}
-            value={message}
-          />
-          <span id="fan-message-count" className="textarea-wrap__count">
-            {message.length}/600
-          </span>
-        </span>
-        {validationError ? (
-          <span className="field__error" id="fan-message-error">
-            {validationError}
-          </span>
-        ) : null}
-      </label>
+      <FanMessageField
+        message={message}
+        validationError={validationError}
+        disabled={isLoading}
+        onMessageChange={onMessageChange}
+      />
 
       <FanSuggestions disabled={isLoading} onSelect={onMessageChange} />
 
@@ -204,36 +282,11 @@ export function AssistanceForm({
         onChange={onPreferencesChange}
       />
 
-      <div className="assistant-form__footer">
-        <Select
-          id="fan-language"
-          label="Response language"
-          hideLabel
-          value={language}
-          disabled={isLoading}
-          onChange={(event) => onLanguageChange(event.target.value as SupportedLanguage)}
-          aria-label="Response language"
-        >
-          {languageOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.nativeLabel}
-            </option>
-          ))}
-        </Select>
-        <span className="assistant-form__language-icon" aria-hidden="true">
-          <Languages size={17} />
-        </span>
-        <Button type="submit" size="large" isLoading={isLoading}>
-          {isLoading ? (
-            "Finding route"
-          ) : (
-            <>
-              <Route size={18} aria-hidden="true" /> Find my route{" "}
-              <Send size={16} aria-hidden="true" />
-            </>
-          )}
-        </Button>
-      </div>
+      <AssistanceFooter
+        language={language}
+        isLoading={isLoading}
+        onLanguageChange={onLanguageChange}
+      />
     </form>
   );
 }

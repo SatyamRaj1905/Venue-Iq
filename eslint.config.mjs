@@ -16,9 +16,9 @@ export default defineConfig([
       },
     },
     rules: {
-      complexity: ["warn", 16],
-      "max-lines": ["warn", { max: 1200, skipBlankLines: true, skipComments: true }],
-      "max-lines-per-function": ["warn", { max: 120, skipBlankLines: true, skipComments: true }],
+      complexity: ["warn", 12],
+      "max-lines": ["warn", { max: 500, skipBlankLines: true, skipComments: true }],
+      "max-lines-per-function": ["warn", { max: 80, skipBlankLines: true, skipComments: true }],
       "promise/always-return": "off",
       "promise/catch-or-return": "off",
       "@typescript-eslint/no-explicit-any": "error",
@@ -30,18 +30,6 @@ export default defineConfig([
     files: ["tests/**/*.{ts,tsx}", "**/*.test.{ts,tsx}"],
     rules: {
       "max-lines-per-function": "off",
-    },
-  },
-  {
-    files: ["src/lib/domain/routing.ts"],
-    rules: {
-      complexity: ["warn", 24],
-    },
-  },
-  {
-    files: ["src/lib/domain/simulation.ts"],
-    rules: {
-      "max-lines-per-function": ["warn", { max: 300, skipBlankLines: true, skipComments: true }],
     },
   },
   globalIgnores([

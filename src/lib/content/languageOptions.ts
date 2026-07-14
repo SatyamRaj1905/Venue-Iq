@@ -1,6 +1,8 @@
-export const supportedLanguages = ["en", "es", "fr", "pt", "ar", "hi"] as const;
+import { SUPPORTED_LANGUAGE_IDS, type SupportedLanguage } from "@/lib/domain/constants";
 
-export type SupportedLanguage = (typeof supportedLanguages)[number];
+export { isSupportedLanguage, type SupportedLanguage } from "@/lib/domain/constants";
+
+export const supportedLanguages = SUPPORTED_LANGUAGE_IDS;
 
 export interface LanguageOption {
   value: SupportedLanguage;
@@ -17,10 +19,6 @@ export const languageOptions: LanguageOption[] = [
   { value: "ar", label: "Arabic", nativeLabel: "العربية", direction: "rtl" },
   { value: "hi", label: "Hindi", nativeLabel: "हिन्दी", direction: "ltr" },
 ];
-
-export function isSupportedLanguage(value: string): value is SupportedLanguage {
-  return supportedLanguages.some((language) => language === value);
-}
 
 export function getLanguageDirection(language: SupportedLanguage): "ltr" | "rtl" {
   return language === "ar" ? "rtl" : "ltr";

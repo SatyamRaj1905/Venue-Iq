@@ -13,7 +13,11 @@ VenueIQ is a server-rendered Next.js application with three role-specific client
 
 ## Client and server boundaries
 
-Browser code receives typed route, scenario, facility, and guidance results. It never imports the Gemini SDK, server environment parser, server prompts, Redis client, or API credentials. Precise location choices remain in the active browser session; preferences use local storage only.
+Browser code receives typed route, scenario, facility, and guidance results. A shared bounded HTTP
+client parses every successful response through a runtime schema loaded only when it is needed;
+superseded operations requests are aborted and ignored. Browser code never imports the Gemini SDK,
+server environment parser, server prompts, Redis client, or API credentials. Precise location
+choices remain in the active browser session; preferences use local storage only.
 
 Server route handlers enforce JSON content type, bounded body size, strict Zod schemas, production origin checks, prompt-injection screening, and rate limits before invoking the service. Server errors are mapped to stable public codes with no stack or credential data.
 
@@ -42,17 +46,29 @@ flowchart LR
 2. The service rejects requests for prompts, credentials, or hidden configuration.
 3. A read-only deterministic function computes the route, facilities, current scenario, SOP, or sustainability snapshot.
 4. Only the minimum trusted result and user wording are placed into the model prompt.
-5. Gemini is called with low temperature, a token cap, a timeout, and one controlled retry.
+5. Only in live mode, the Gemini client is loaded and called with low temperature, a token cap, a
+   timeout, and one controlled retry. Parsed environment, SDK client, rate limiter, and identical
+   short-lived operations brief results are reused within a warm server instance.
 6. JSON is parsed through an explicit Zod schema. Arbitrary model HTML is never rendered.
 7. Any missing key, demo-mode setting, timeout, rate limit, remote error, or invalid response produces a usable deterministic fallback.
 
 ## Deterministic routing
 
-The stadium is a typed weighted graph. Routing uses Dijkstra's algorithm. Edges are filtered for closures and accessible-path obstructions, then weighted for distance, crowd density, quietness, and step-free requirements. Walking time is derived from trusted edge distance and a documented accessible walking speed. Map rendering and the ordered text alternative consume the same `RouteResult`.
+The stadium is a typed weighted graph. A cached immutable index provides constant-time node and
+edge lookups plus prebuilt adjacency lists. Routing uses deterministic Dijkstra search backed by a
+binary min-heap, giving `O((V + E) log V)` search instead of repeatedly scanning every unvisited
+node. Edges are filtered for closures and accessibility obstructions, then weighted for distance,
+crowd density, quietness, and step-free requirements. Walking time is derived from trusted edge
+distance and a documented accessible walking speed. Map rendering and the ordered text alternative
+consume the same `RouteResult`.
 
 ## Simulation flow
 
-Every simulator selection maps to a fixed seed and immutable scenario definition. Pure functions derive occupancy, density, gate throughput, queue time, risk, incidents, transport, and sustainability values. Changing scenarios is local and deliberate; there is no noisy background polling. The selected snapshot is sent to the operations briefing endpoint for explanation only.
+Every simulator selection maps to a fixed seed, tick, and immutable scenario definition. Pure
+functions derive occupancy, density, gate throughput, queue time, risk, incidents, transport, and
+sustainability values. Changing scenarios is local and deliberate; pausing does not regenerate the
+snapshot and there is no noisy background polling. The selected seed/tick coordinates are sent to
+the operations briefing endpoint so its explanation is grounded in the exact visible snapshot.
 
 ## Trust boundaries
 
@@ -72,3 +88,7 @@ Failures are intentionally boring and safe. The interface preserves the last det
 - Server Components are the default; only role workspaces and preference controls are client components.
 - Seeded scenarios replace polling and make test expectations stable.
 - Structured model output plus post-validation is preferred over rendered prose or model-generated HTML.
+- Role-specific AI modules and thin compatibility barrels keep dependencies explicit while the
+  three deterministic content adapters delegate to one canonical fallback implementation.
+- Production bundle budgets and route-scoped styles turn client weight into a checked release
+  constraint instead of an undocumented aspiration.

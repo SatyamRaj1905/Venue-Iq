@@ -62,8 +62,7 @@ describe("deterministic fan intent and tool policy", () => {
     expect(fallback.intent).toBe("transport");
     expect(fallback.transportOptions).toEqual(grounding.transportOptions);
     expect(fallback.summary).toContain(grounding.transportOptions?.[0]?.name);
-    expect(clientFallback.intent).toBe("transport");
-    expect(clientFallback.route).toBeUndefined();
+    expect(clientFallback).toEqual(fallback);
     expect(clientFallback.transportOptions?.every((option) => option.accessible)).toBe(true);
   });
 
@@ -82,8 +81,7 @@ describe("deterministic fan intent and tool policy", () => {
     ]);
     expect(fallback.intent).toBe("facility");
     expect(fallback.summary).toContain("North Accessible Toilet");
-    expect(clientFallback.intent).toBe("facility");
-    expect(clientFallback.route?.destinationId).toBe("accessible-toilet-north");
+    expect(clientFallback).toEqual(fallback);
     expect(clientFallback.route?.nearbyFacilities).toContainEqual(
       expect.objectContaining({ id: "accessible-toilet-north", accessible: true }),
     );

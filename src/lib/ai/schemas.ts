@@ -1,19 +1,21 @@
 import { z } from "zod";
+import {
+  SCENARIO_IDS,
+  SUPPORTED_LANGUAGE_IDS,
+  VOLUNTEER_ROLE_IDS,
+  VOLUNTEER_TOPIC_IDS,
+} from "@/lib/domain/constants";
 
-export const supportedLanguageSchema = z.enum(["en", "es", "fr", "pt", "ar", "hi"]);
-export type SupportedLanguage = z.infer<typeof supportedLanguageSchema>;
+export type {
+  ScenarioId,
+  SupportedLanguage,
+  VolunteerRole,
+  VolunteerTopic,
+} from "@/lib/domain/constants";
 
-export const scenarioSchema = z.enum([
-  "normal",
-  "arrival-surge",
-  "gate-closure",
-  "train-disruption",
-  "heat-alert",
-  "medical-response",
-  "accessibility-obstruction",
-  "waste-overflow",
-]);
-export type ScenarioId = z.infer<typeof scenarioSchema>;
+export const supportedLanguageSchema = z.enum(SUPPORTED_LANGUAGE_IDS);
+
+export const scenarioSchema = z.enum(SCENARIO_IDS);
 
 const safeIdentifierSchema = z
   .string()
@@ -136,6 +138,8 @@ export const operationsBriefRequestSchema = z
   .object({
     scenario: scenarioSchema,
     language: supportedLanguageSchema.default("en"),
+    seed: z.number().int().nonnegative().max(2_147_483_647).optional(),
+    tick: z.number().int().nonnegative().max(10_000).optional(),
   })
   .strict();
 export type OperationsBriefRequest = z.infer<typeof operationsBriefRequestSchema>;
@@ -174,22 +178,9 @@ export const operationsBriefSchema = z
   .strict();
 export type OperationsBrief = z.infer<typeof operationsBriefSchema>;
 
-export const volunteerRoleSchema = z.enum([
-  "wayfinding",
-  "accessibility",
-  "guest-services",
-  "transport",
-]);
-export type VolunteerRole = z.infer<typeof volunteerRoleSchema>;
+export const volunteerRoleSchema = z.enum(VOLUNTEER_ROLE_IDS);
 
-export const volunteerTopicSchema = z.enum([
-  "accessible-entry",
-  "lost-person",
-  "medical",
-  "transport",
-  "crowd",
-]);
-export type VolunteerTopic = z.infer<typeof volunteerTopicSchema>;
+export const volunteerTopicSchema = z.enum(VOLUNTEER_TOPIC_IDS);
 
 export const volunteerRequestSchema = z
   .object({
@@ -243,10 +234,28 @@ export const volunteerNarrativeSchema = z
   .strict();
 export type VolunteerNarrative = z.infer<typeof volunteerNarrativeSchema>;
 
+export const aiResponseModeSchema = z.enum(["gemini", "demo", "fallback"]);
+export type AiResponseMode = z.infer<typeof aiResponseModeSchema>;
+
 export interface SuccessEnvelope<T> {
   readonly data: T;
   readonly meta: Readonly<{
-    mode: "gemini" | "demo" | "fallback";
+    mode: AiResponseMode;
     simulated: true;
   }>;
+}
+
+/** Builds the runtime counterpart of `SuccessEnvelope` for a concrete response schema. */
+export function successEnvelopeSchema<TSchema extends z.ZodType>(dataSchema: TSchema) {
+  return z
+    .object({
+      data: dataSchema,
+      meta: z
+        .object({
+          mode: aiResponseModeSchema,
+          simulated: z.literal(true),
+        })
+        .strict(),
+    })
+    .strict();
 }

@@ -8,914 +8,11 @@ import type {
   StadiumZone,
 } from "./types";
 
-export const STADIUM_NODE_IDS = {
-  gateA: "gate-a",
-  gateB: "gate-b",
-  gateC: "gate-c",
-  gateD: "gate-d",
-  section110: "section-110",
-  section118: "section-118",
-  section214: "section-214",
-  section305: "section-305",
-  northConcourse: "concourse-north",
-  eastConcourse: "concourse-east",
-  southConcourse: "concourse-south",
-  westConcourse: "concourse-west",
-  accessibleToiletNorth: "accessible-toilet-north",
-  medicalEast: "medical-east",
-  assistanceGateA: "assistance-gate-a",
-  transportNorth: "transport-north",
-} as const;
+import { STADIUM_EDGES } from "./stadiumEdges.data";
+import { STADIUM_NODES, STADIUM_NODE_IDS } from "./stadiumNodes.data";
+import { STADIUM_ZONES } from "./stadiumZones.data";
 
-export const STADIUM_ZONES: readonly StadiumZone[] = [
-  {
-    id: "north-entry",
-    name: "North Entry Plaza",
-    capacity: 6_000,
-    areaSquareMeters: 4_200,
-    level: 0,
-  },
-  {
-    id: "north-concourse",
-    name: "North Concourse",
-    capacity: 9_000,
-    areaSquareMeters: 3_400,
-    level: 0,
-  },
-  {
-    id: "east-concourse",
-    name: "East Concourse",
-    capacity: 8_500,
-    areaSquareMeters: 3_100,
-    level: 0,
-  },
-  {
-    id: "south-concourse",
-    name: "South Concourse",
-    capacity: 8_000,
-    areaSquareMeters: 3_300,
-    level: 0,
-  },
-  {
-    id: "west-concourse",
-    name: "West Concourse",
-    capacity: 8_500,
-    areaSquareMeters: 3_600,
-    level: 0,
-  },
-  {
-    id: "upper-north",
-    name: "Upper North Tier",
-    capacity: 12_000,
-    areaSquareMeters: 4_500,
-    level: 2,
-  },
-  {
-    id: "upper-east",
-    name: "Upper East Tier",
-    capacity: 11_000,
-    areaSquareMeters: 4_100,
-    level: 3,
-  },
-  {
-    id: "transport-hub",
-    name: "Stadium Transport Hub",
-    capacity: 7_000,
-    areaSquareMeters: 5_500,
-    level: 0,
-  },
-] as const;
-
-export const STADIUM_NODES: readonly StadiumNode[] = [
-  {
-    id: "gate-a",
-    name: "Gate A",
-    kind: "gate",
-    zoneId: "north-entry",
-    level: 0,
-    position: { x: 50, y: 4 },
-    accessible: true,
-    quietScore: 44,
-    description: "Primary north entrance with accessible screening lanes.",
-  },
-  {
-    id: "gate-b",
-    name: "Gate B",
-    kind: "gate",
-    zoneId: "east-concourse",
-    level: 0,
-    position: { x: 94, y: 48 },
-    accessible: true,
-    quietScore: 40,
-    description: "East entrance serving lower-bowl sections.",
-  },
-  {
-    id: "gate-c",
-    name: "Gate C",
-    kind: "gate",
-    zoneId: "south-concourse",
-    level: 0,
-    position: { x: 50, y: 96 },
-    accessible: true,
-    quietScore: 38,
-    description: "South entrance adjacent to shuttle drop-off.",
-  },
-  {
-    id: "gate-d",
-    name: "Gate D",
-    kind: "gate",
-    zoneId: "west-concourse",
-    level: 0,
-    position: { x: 6, y: 48 },
-    accessible: true,
-    quietScore: 60,
-    description: "Lower-volume west entrance with step-free access.",
-  },
-  {
-    id: "concourse-north",
-    name: "North Concourse",
-    kind: "concourse",
-    zoneId: "north-concourse",
-    level: 0,
-    position: { x: 50, y: 22 },
-    accessible: true,
-    quietScore: 46,
-    description: "Main circulation space for the north stand.",
-  },
-  {
-    id: "concourse-east",
-    name: "East Concourse",
-    kind: "concourse",
-    zoneId: "east-concourse",
-    level: 0,
-    position: { x: 78, y: 50 },
-    accessible: true,
-    quietScore: 39,
-    description: "Main circulation space for the east stand.",
-  },
-  {
-    id: "concourse-south",
-    name: "South Concourse",
-    kind: "concourse",
-    zoneId: "south-concourse",
-    level: 0,
-    position: { x: 50, y: 78 },
-    accessible: true,
-    quietScore: 58,
-    description: "Main circulation space for the south stand.",
-  },
-  {
-    id: "concourse-west",
-    name: "West Concourse",
-    kind: "concourse",
-    zoneId: "west-concourse",
-    level: 0,
-    position: { x: 22, y: 50 },
-    accessible: true,
-    quietScore: 82,
-    description: "Quieter circulation space for the west stand.",
-  },
-  {
-    id: "lift-north",
-    name: "North Accessible Lift",
-    kind: "lift",
-    zoneId: "north-concourse",
-    level: 0,
-    position: { x: 56, y: 27 },
-    accessible: true,
-    quietScore: 52,
-    description: "Staff-monitored lift connecting the concourse to level two.",
-  },
-  {
-    id: "stairs-north",
-    name: "North Stairs",
-    kind: "stairs",
-    zoneId: "north-concourse",
-    level: 0,
-    position: { x: 47, y: 29 },
-    accessible: false,
-    quietScore: 37,
-    description: "Direct stairway to the upper north tier.",
-  },
-  {
-    id: "ramp-north",
-    name: "North Ramp",
-    kind: "ramp",
-    zoneId: "north-concourse",
-    level: 0,
-    position: { x: 64, y: 28 },
-    accessible: true,
-    quietScore: 70,
-    description: "Wide step-free ramp to the upper north tier.",
-  },
-  {
-    id: "upper-north-landing",
-    name: "Upper North Landing",
-    kind: "concourse",
-    zoneId: "upper-north",
-    level: 2,
-    position: { x: 50, y: 36 },
-    accessible: true,
-    quietScore: 55,
-    description: "Level-two landing serving sections 210 to 218.",
-  },
-  {
-    id: "lift-west",
-    name: "West Accessible Lift",
-    kind: "lift",
-    zoneId: "west-concourse",
-    level: 0,
-    position: { x: 30, y: 43 },
-    accessible: true,
-    quietScore: 84,
-    description: "Low-traffic lift connecting west concourse to level two.",
-  },
-  {
-    id: "upper-west-landing",
-    name: "Upper West Landing",
-    kind: "concourse",
-    zoneId: "upper-north",
-    level: 2,
-    position: { x: 34, y: 38 },
-    accessible: true,
-    quietScore: 86,
-    description: "Quiet level-two landing beside the sensory room.",
-  },
-  {
-    id: "upper-east-landing",
-    name: "Upper East Landing",
-    kind: "concourse",
-    zoneId: "upper-east",
-    level: 3,
-    position: { x: 67, y: 39 },
-    accessible: true,
-    quietScore: 48,
-    description: "Level-three landing serving the east upper tier.",
-  },
-  {
-    id: "section-110",
-    name: "Section 110",
-    kind: "section",
-    zoneId: "east-concourse",
-    level: 1,
-    position: { x: 68, y: 53 },
-    accessible: true,
-    quietScore: 36,
-    description: "Lower east seating section with wheelchair positions.",
-  },
-  {
-    id: "section-118",
-    name: "Section 118",
-    kind: "section",
-    zoneId: "south-concourse",
-    level: 1,
-    position: { x: 50, y: 68 },
-    accessible: true,
-    quietScore: 49,
-    description: "Lower south seating section.",
-  },
-  {
-    id: "section-214",
-    name: "Section 214",
-    kind: "section",
-    zoneId: "upper-north",
-    level: 2,
-    position: { x: 50, y: 43 },
-    accessible: true,
-    quietScore: 52,
-    description: "Upper north seating with accessible viewing platform.",
-  },
-  {
-    id: "section-305",
-    name: "Section 305",
-    kind: "section",
-    zoneId: "upper-east",
-    level: 3,
-    position: { x: 62, y: 46 },
-    accessible: true,
-    quietScore: 43,
-    description: "Upper east seating section.",
-  },
-  {
-    id: "accessible-toilet-north",
-    name: "North Accessible Toilet",
-    kind: "accessible-toilet",
-    zoneId: "north-concourse",
-    level: 0,
-    position: { x: 43, y: 23 },
-    accessible: true,
-    quietScore: 64,
-    description: "Radar-key accessible toilet with adult changing space.",
-  },
-  {
-    id: "toilet-east",
-    name: "East Toilets",
-    kind: "toilet",
-    zoneId: "east-concourse",
-    level: 0,
-    position: { x: 80, y: 43 },
-    accessible: false,
-    quietScore: 30,
-    description: "General toilet facilities on the east concourse.",
-  },
-  {
-    id: "medical-east",
-    name: "East Medical Point",
-    kind: "medical",
-    zoneId: "east-concourse",
-    level: 0,
-    position: { x: 75, y: 43 },
-    accessible: true,
-    quietScore: 72,
-    description: "Clinician-staffed first-aid and medical assessment point.",
-  },
-  {
-    id: "medical-north",
-    name: "North Medical Point",
-    kind: "medical",
-    zoneId: "north-concourse",
-    level: 0,
-    position: { x: 59, y: 21 },
-    accessible: true,
-    quietScore: 70,
-    description: "First-aid point near the north entrance.",
-  },
-  {
-    id: "water-west",
-    name: "West Water Refill",
-    kind: "water-refill",
-    zoneId: "west-concourse",
-    level: 0,
-    position: { x: 22, y: 43 },
-    accessible: true,
-    quietScore: 78,
-    description: "Two height-adjusted bottle refill taps.",
-  },
-  {
-    id: "water-south",
-    name: "South Water Refill",
-    kind: "water-refill",
-    zoneId: "south-concourse",
-    level: 0,
-    position: { x: 57, y: 77 },
-    accessible: true,
-    quietScore: 61,
-    description: "Four bottle refill taps near the south food court.",
-  },
-  {
-    id: "assistance-gate-a",
-    name: "Gate A Assistance Desk",
-    kind: "assistance-desk",
-    zoneId: "north-entry",
-    level: 0,
-    position: { x: 57, y: 10 },
-    accessible: true,
-    quietScore: 65,
-    description: "Multilingual guest and accessibility assistance desk.",
-  },
-  {
-    id: "assistance-west",
-    name: "West Assistance Desk",
-    kind: "assistance-desk",
-    zoneId: "west-concourse",
-    level: 0,
-    position: { x: 18, y: 56 },
-    accessible: true,
-    quietScore: 86,
-    description: "Quiet guest-services and sensory-support desk.",
-  },
-  {
-    id: "food-south",
-    name: "South Food Court",
-    kind: "food",
-    zoneId: "south-concourse",
-    level: 0,
-    position: { x: 42, y: 77 },
-    accessible: true,
-    quietScore: 25,
-    description: "Main south food and beverage area.",
-  },
-  {
-    id: "transport-north",
-    name: "North Station Pickup",
-    kind: "transport-pickup",
-    zoneId: "transport-hub",
-    level: 0,
-    position: { x: 50, y: 0 },
-    accessible: true,
-    quietScore: 35,
-    description: "Accessible pedestrian link to North Stadium Station.",
-  },
-  {
-    id: "transport-south",
-    name: "South Shuttle Pickup",
-    kind: "transport-pickup",
-    zoneId: "transport-hub",
-    level: 0,
-    position: { x: 50, y: 100 },
-    accessible: true,
-    quietScore: 42,
-    description: "Low-floor shuttle and accessible taxi pickup area.",
-  },
-] as const;
-
-export const STADIUM_EDGES: readonly StadiumEdge[] = [
-  {
-    id: "transport-north--gate-a",
-    from: "transport-north",
-    to: "gate-a",
-    bidirectional: true,
-    distanceMeters: 90,
-    kind: "accessible-path",
-    stepFree: true,
-    widthMeters: 8,
-    quietScore: 38,
-    baselineCrowd: 0.55,
-    status: "open",
-    accessibilityObstructed: false,
-    zoneIds: ["transport-hub", "north-entry"],
-  },
-  {
-    id: "gate-a--north",
-    from: "gate-a",
-    to: "concourse-north",
-    bidirectional: true,
-    distanceMeters: 72,
-    kind: "accessible-path",
-    stepFree: true,
-    widthMeters: 9,
-    quietScore: 43,
-    baselineCrowd: 0.62,
-    status: "open",
-    accessibilityObstructed: false,
-    zoneIds: ["north-entry", "north-concourse"],
-  },
-  {
-    id: "gate-b--east",
-    from: "gate-b",
-    to: "concourse-east",
-    bidirectional: true,
-    distanceMeters: 58,
-    kind: "accessible-path",
-    stepFree: true,
-    widthMeters: 8,
-    quietScore: 38,
-    baselineCrowd: 0.64,
-    status: "open",
-    accessibilityObstructed: false,
-    zoneIds: ["east-concourse"],
-  },
-  {
-    id: "gate-c--south",
-    from: "gate-c",
-    to: "concourse-south",
-    bidirectional: true,
-    distanceMeters: 60,
-    kind: "accessible-path",
-    stepFree: true,
-    widthMeters: 8,
-    quietScore: 42,
-    baselineCrowd: 0.5,
-    status: "open",
-    accessibilityObstructed: false,
-    zoneIds: ["south-concourse"],
-  },
-  {
-    id: "gate-d--west",
-    from: "gate-d",
-    to: "concourse-west",
-    bidirectional: true,
-    distanceMeters: 62,
-    kind: "accessible-path",
-    stepFree: true,
-    widthMeters: 8,
-    quietScore: 72,
-    baselineCrowd: 0.28,
-    status: "open",
-    accessibilityObstructed: false,
-    zoneIds: ["west-concourse"],
-  },
-  {
-    id: "north--east",
-    from: "concourse-north",
-    to: "concourse-east",
-    bidirectional: true,
-    distanceMeters: 118,
-    kind: "walkway",
-    stepFree: true,
-    widthMeters: 7,
-    quietScore: 34,
-    baselineCrowd: 0.72,
-    status: "open",
-    accessibilityObstructed: false,
-    zoneIds: ["north-concourse", "east-concourse"],
-  },
-  {
-    id: "east--south",
-    from: "concourse-east",
-    to: "concourse-south",
-    bidirectional: true,
-    distanceMeters: 116,
-    kind: "walkway",
-    stepFree: true,
-    widthMeters: 7,
-    quietScore: 45,
-    baselineCrowd: 0.55,
-    status: "open",
-    accessibilityObstructed: false,
-    zoneIds: ["east-concourse", "south-concourse"],
-  },
-  {
-    id: "south--west",
-    from: "concourse-south",
-    to: "concourse-west",
-    bidirectional: true,
-    distanceMeters: 112,
-    kind: "walkway",
-    stepFree: true,
-    widthMeters: 7,
-    quietScore: 68,
-    baselineCrowd: 0.36,
-    status: "open",
-    accessibilityObstructed: false,
-    zoneIds: ["south-concourse", "west-concourse"],
-  },
-  {
-    id: "west--north",
-    from: "concourse-west",
-    to: "concourse-north",
-    bidirectional: true,
-    distanceMeters: 120,
-    kind: "walkway",
-    stepFree: true,
-    widthMeters: 8,
-    quietScore: 86,
-    baselineCrowd: 0.22,
-    status: "open",
-    accessibilityObstructed: false,
-    zoneIds: ["west-concourse", "north-concourse"],
-  },
-  {
-    id: "north--stairs-north",
-    from: "concourse-north",
-    to: "stairs-north",
-    bidirectional: true,
-    distanceMeters: 14,
-    kind: "walkway",
-    stepFree: true,
-    widthMeters: 4,
-    quietScore: 38,
-    baselineCrowd: 0.62,
-    status: "open",
-    accessibilityObstructed: false,
-    zoneIds: ["north-concourse"],
-  },
-  {
-    id: "stairs-north--upper-north",
-    from: "stairs-north",
-    to: "upper-north-landing",
-    bidirectional: true,
-    distanceMeters: 18,
-    kind: "stairs",
-    stepFree: false,
-    widthMeters: 4,
-    quietScore: 34,
-    baselineCrowd: 0.58,
-    status: "open",
-    accessibilityObstructed: false,
-    zoneIds: ["north-concourse", "upper-north"],
-  },
-  {
-    id: "north--lift-north",
-    from: "concourse-north",
-    to: "lift-north",
-    bidirectional: true,
-    distanceMeters: 22,
-    kind: "accessible-path",
-    stepFree: true,
-    widthMeters: 3,
-    quietScore: 51,
-    baselineCrowd: 0.68,
-    status: "open",
-    accessibilityObstructed: false,
-    zoneIds: ["north-concourse"],
-  },
-  {
-    id: "lift-north--upper-north",
-    from: "lift-north",
-    to: "upper-north-landing",
-    bidirectional: true,
-    distanceMeters: 12,
-    kind: "lift",
-    stepFree: true,
-    widthMeters: 2.2,
-    quietScore: 50,
-    baselineCrowd: 0.72,
-    status: "open",
-    accessibilityObstructed: false,
-    zoneIds: ["north-concourse", "upper-north"],
-  },
-  {
-    id: "north--ramp-north",
-    from: "concourse-north",
-    to: "ramp-north",
-    bidirectional: true,
-    distanceMeters: 30,
-    kind: "accessible-path",
-    stepFree: true,
-    widthMeters: 5,
-    quietScore: 70,
-    baselineCrowd: 0.34,
-    status: "open",
-    accessibilityObstructed: false,
-    zoneIds: ["north-concourse"],
-  },
-  {
-    id: "ramp-north--upper-north",
-    from: "ramp-north",
-    to: "upper-north-landing",
-    bidirectional: true,
-    distanceMeters: 78,
-    kind: "ramp",
-    stepFree: true,
-    widthMeters: 5,
-    quietScore: 72,
-    baselineCrowd: 0.3,
-    status: "open",
-    accessibilityObstructed: false,
-    zoneIds: ["north-concourse", "upper-north"],
-  },
-  {
-    id: "west--lift-west",
-    from: "concourse-west",
-    to: "lift-west",
-    bidirectional: true,
-    distanceMeters: 24,
-    kind: "accessible-path",
-    stepFree: true,
-    widthMeters: 4,
-    quietScore: 84,
-    baselineCrowd: 0.18,
-    status: "open",
-    accessibilityObstructed: false,
-    zoneIds: ["west-concourse"],
-  },
-  {
-    id: "lift-west--upper-west",
-    from: "lift-west",
-    to: "upper-west-landing",
-    bidirectional: true,
-    distanceMeters: 14,
-    kind: "lift",
-    stepFree: true,
-    widthMeters: 2.2,
-    quietScore: 82,
-    baselineCrowd: 0.2,
-    status: "open",
-    accessibilityObstructed: false,
-    zoneIds: ["west-concourse", "upper-north"],
-  },
-  {
-    id: "upper-west--upper-north",
-    from: "upper-west-landing",
-    to: "upper-north-landing",
-    bidirectional: true,
-    distanceMeters: 92,
-    kind: "accessible-path",
-    stepFree: true,
-    widthMeters: 5,
-    quietScore: 88,
-    baselineCrowd: 0.18,
-    status: "open",
-    accessibilityObstructed: false,
-    zoneIds: ["upper-north"],
-  },
-  {
-    id: "upper-north--upper-east",
-    from: "upper-north-landing",
-    to: "upper-east-landing",
-    bidirectional: true,
-    distanceMeters: 104,
-    kind: "accessible-path",
-    stepFree: true,
-    widthMeters: 5,
-    quietScore: 47,
-    baselineCrowd: 0.5,
-    status: "open",
-    accessibilityObstructed: false,
-    zoneIds: ["upper-north", "upper-east"],
-  },
-  {
-    id: "upper-north--section-214",
-    from: "upper-north-landing",
-    to: "section-214",
-    bidirectional: true,
-    distanceMeters: 44,
-    kind: "accessible-path",
-    stepFree: true,
-    widthMeters: 4,
-    quietScore: 54,
-    baselineCrowd: 0.48,
-    status: "open",
-    accessibilityObstructed: false,
-    zoneIds: ["upper-north"],
-  },
-  {
-    id: "upper-east--section-305",
-    from: "upper-east-landing",
-    to: "section-305",
-    bidirectional: true,
-    distanceMeters: 48,
-    kind: "accessible-path",
-    stepFree: true,
-    widthMeters: 4,
-    quietScore: 44,
-    baselineCrowd: 0.52,
-    status: "open",
-    accessibilityObstructed: false,
-    zoneIds: ["upper-east"],
-  },
-  {
-    id: "east--section-110",
-    from: "concourse-east",
-    to: "section-110",
-    bidirectional: true,
-    distanceMeters: 50,
-    kind: "accessible-path",
-    stepFree: true,
-    widthMeters: 4,
-    quietScore: 36,
-    baselineCrowd: 0.58,
-    status: "open",
-    accessibilityObstructed: false,
-    zoneIds: ["east-concourse"],
-  },
-  {
-    id: "south--section-118",
-    from: "concourse-south",
-    to: "section-118",
-    bidirectional: true,
-    distanceMeters: 46,
-    kind: "accessible-path",
-    stepFree: true,
-    widthMeters: 4,
-    quietScore: 50,
-    baselineCrowd: 0.46,
-    status: "open",
-    accessibilityObstructed: false,
-    zoneIds: ["south-concourse"],
-  },
-  {
-    id: "north--accessible-toilet",
-    from: "concourse-north",
-    to: "accessible-toilet-north",
-    bidirectional: true,
-    distanceMeters: 28,
-    kind: "accessible-path",
-    stepFree: true,
-    widthMeters: 3,
-    quietScore: 62,
-    baselineCrowd: 0.3,
-    status: "open",
-    accessibilityObstructed: false,
-    zoneIds: ["north-concourse"],
-  },
-  {
-    id: "east--toilet-east",
-    from: "concourse-east",
-    to: "toilet-east",
-    bidirectional: true,
-    distanceMeters: 25,
-    kind: "walkway",
-    stepFree: true,
-    widthMeters: 3,
-    quietScore: 30,
-    baselineCrowd: 0.6,
-    status: "open",
-    accessibilityObstructed: false,
-    zoneIds: ["east-concourse"],
-  },
-  {
-    id: "east--medical-east",
-    from: "concourse-east",
-    to: "medical-east",
-    bidirectional: true,
-    distanceMeters: 22,
-    kind: "accessible-path",
-    stepFree: true,
-    widthMeters: 3,
-    quietScore: 67,
-    baselineCrowd: 0.24,
-    status: "open",
-    accessibilityObstructed: false,
-    zoneIds: ["east-concourse"],
-  },
-  {
-    id: "north--medical-north",
-    from: "concourse-north",
-    to: "medical-north",
-    bidirectional: true,
-    distanceMeters: 24,
-    kind: "accessible-path",
-    stepFree: true,
-    widthMeters: 3,
-    quietScore: 66,
-    baselineCrowd: 0.3,
-    status: "open",
-    accessibilityObstructed: false,
-    zoneIds: ["north-concourse"],
-  },
-  {
-    id: "west--water-west",
-    from: "concourse-west",
-    to: "water-west",
-    bidirectional: true,
-    distanceMeters: 23,
-    kind: "accessible-path",
-    stepFree: true,
-    widthMeters: 3,
-    quietScore: 75,
-    baselineCrowd: 0.22,
-    status: "open",
-    accessibilityObstructed: false,
-    zoneIds: ["west-concourse"],
-  },
-  {
-    id: "south--water-south",
-    from: "concourse-south",
-    to: "water-south",
-    bidirectional: true,
-    distanceMeters: 24,
-    kind: "accessible-path",
-    stepFree: true,
-    widthMeters: 3,
-    quietScore: 57,
-    baselineCrowd: 0.36,
-    status: "open",
-    accessibilityObstructed: false,
-    zoneIds: ["south-concourse"],
-  },
-  {
-    id: "gate-a--assistance",
-    from: "gate-a",
-    to: "assistance-gate-a",
-    bidirectional: true,
-    distanceMeters: 20,
-    kind: "accessible-path",
-    stepFree: true,
-    widthMeters: 3,
-    quietScore: 62,
-    baselineCrowd: 0.28,
-    status: "open",
-    accessibilityObstructed: false,
-    zoneIds: ["north-entry"],
-  },
-  {
-    id: "west--assistance-west",
-    from: "concourse-west",
-    to: "assistance-west",
-    bidirectional: true,
-    distanceMeters: 26,
-    kind: "accessible-path",
-    stepFree: true,
-    widthMeters: 3,
-    quietScore: 84,
-    baselineCrowd: 0.2,
-    status: "open",
-    accessibilityObstructed: false,
-    zoneIds: ["west-concourse"],
-  },
-  {
-    id: "south--food-south",
-    from: "concourse-south",
-    to: "food-south",
-    bidirectional: true,
-    distanceMeters: 30,
-    kind: "walkway",
-    stepFree: true,
-    widthMeters: 5,
-    quietScore: 24,
-    baselineCrowd: 0.64,
-    status: "open",
-    accessibilityObstructed: false,
-    zoneIds: ["south-concourse"],
-  },
-  {
-    id: "south--transport-south",
-    from: "concourse-south",
-    to: "transport-south",
-    bidirectional: true,
-    distanceMeters: 105,
-    kind: "accessible-path",
-    stepFree: true,
-    widthMeters: 8,
-    quietScore: 44,
-    baselineCrowd: 0.44,
-    status: "open",
-    accessibilityObstructed: false,
-    zoneIds: ["south-concourse", "transport-hub"],
-  },
-] as const;
+export { STADIUM_EDGES, STADIUM_NODES, STADIUM_NODE_IDS, STADIUM_ZONES };
 
 export const STADIUM_GRAPH: StadiumGraph = {
   nodes: STADIUM_NODES,
@@ -938,57 +35,127 @@ export function isFacilityKind(kind: string): kind is FacilityKind {
   return FACILITY_KINDS.has(kind);
 }
 
+type FacilityNode = StadiumNode & Readonly<{ kind: FacilityKind }>;
+
+function isFacilityNode(node: StadiumNode): node is FacilityNode {
+  return isFacilityKind(node.kind);
+}
+
+interface GraphQueryIndex {
+  readonly connectingEdgesByNode: ReadonlyMap<NodeId, readonly StadiumEdge[]>;
+  readonly edgeById: ReadonlyMap<string, StadiumEdge>;
+  readonly facilityNodes: readonly FacilityNode[];
+  readonly nodeById: ReadonlyMap<NodeId, StadiumNode>;
+  readonly nodesById: ReadonlyMap<NodeId, readonly StadiumNode[]>;
+  readonly zoneById: ReadonlyMap<string, StadiumZone>;
+}
+
+const graphQueryIndexCache = new WeakMap<StadiumGraph, GraphQueryIndex>();
+
+function setFirst<TKey, TValue>(map: Map<TKey, TValue>, key: TKey, value: TValue): void {
+  if (!map.has(key)) {
+    map.set(key, value);
+  }
+}
+
+function buildGraphQueryIndex(graph: StadiumGraph): GraphQueryIndex {
+  const nodeById = new Map<NodeId, StadiumNode>();
+  const nodesById = new Map<NodeId, StadiumNode[]>();
+  const edgeById = new Map<string, StadiumEdge>();
+  const zoneById = new Map<string, StadiumZone>();
+  const connectingEdgesByNode = new Map<NodeId, StadiumEdge[]>();
+  const facilityNodes: FacilityNode[] = [];
+
+  for (const node of graph.nodes) {
+    setFirst(nodeById, node.id, node);
+    const matchingNodes = nodesById.get(node.id) ?? [];
+    matchingNodes.push(node);
+    nodesById.set(node.id, matchingNodes);
+    if (!connectingEdgesByNode.has(node.id)) {
+      connectingEdgesByNode.set(node.id, []);
+    }
+    if (isFacilityNode(node)) {
+      facilityNodes.push(node);
+    }
+  }
+  for (const edge of graph.edges) {
+    setFirst(edgeById, edge.id, edge);
+    connectingEdgesByNode.get(edge.from)?.push(edge);
+    if (edge.to !== edge.from) {
+      connectingEdgesByNode.get(edge.to)?.push(edge);
+    }
+  }
+  for (const zone of graph.zones) {
+    setFirst(zoneById, zone.id, zone);
+  }
+
+  return { connectingEdgesByNode, edgeById, facilityNodes, nodeById, nodesById, zoneById };
+}
+
+function getGraphQueryIndex(graph: StadiumGraph): GraphQueryIndex {
+  const cached = graphQueryIndexCache.get(graph);
+  if (cached !== undefined) {
+    return cached;
+  }
+  const index = buildGraphQueryIndex(graph);
+  graphQueryIndexCache.set(graph, index);
+  return index;
+}
+
 export function getStadiumNode(
   nodeId: NodeId,
   graph: StadiumGraph = STADIUM_GRAPH,
 ): StadiumNode | undefined {
-  return graph.nodes.find((node) => node.id === nodeId);
+  return getGraphQueryIndex(graph).nodeById.get(nodeId);
 }
 
 export function getStadiumEdge(
   edgeId: string,
   graph: StadiumGraph = STADIUM_GRAPH,
 ): StadiumEdge | undefined {
-  return graph.edges.find((edge) => edge.id === edgeId);
+  return getGraphQueryIndex(graph).edgeById.get(edgeId);
 }
 
 export function getZone(
   zoneId: string,
   graph: StadiumGraph = STADIUM_GRAPH,
 ): StadiumZone | undefined {
-  return graph.zones.find((zone) => zone.id === zoneId);
+  return getGraphQueryIndex(graph).zoneById.get(zoneId);
 }
 
 function directDistanceToRoute(
   facility: StadiumNode,
   routeNodeIds: ReadonlySet<NodeId>,
-  graph: StadiumGraph,
+  index: GraphQueryIndex,
 ): number {
   if (routeNodeIds.has(facility.id)) {
     return 0;
   }
 
-  const connectingEdges = graph.edges.filter(
-    (edge) =>
+  let hasConnectingEdge = false;
+  let connectingDistance = Number.POSITIVE_INFINITY;
+  for (const edge of index.connectingEdgesByNode.get(facility.id) ?? []) {
+    if (
       (edge.from === facility.id && routeNodeIds.has(edge.to)) ||
-      (edge.to === facility.id && routeNodeIds.has(edge.from)),
-  );
-  if (connectingEdges.length > 0) {
-    return Math.min(...connectingEdges.map((edge) => edge.distanceMeters));
+      (edge.to === facility.id && routeNodeIds.has(edge.from))
+    ) {
+      hasConnectingEdge = true;
+      connectingDistance = Math.min(connectingDistance, edge.distanceMeters);
+    }
+  }
+  if (hasConnectingEdge) {
+    return connectingDistance;
   }
 
-  const routeNodes = graph.nodes.filter((node) => routeNodeIds.has(node.id));
-  if (routeNodes.length === 0) {
-    return Number.POSITIVE_INFINITY;
-  }
-
-  return Math.min(
-    ...routeNodes.map((node) => {
+  let directDistance = Number.POSITIVE_INFINITY;
+  for (const routeNodeId of routeNodeIds) {
+    for (const node of index.nodesById.get(routeNodeId) ?? []) {
       const xDistance = node.position.x - facility.position.x;
       const yDistance = node.position.y - facility.position.y;
-      return Math.round(Math.hypot(xDistance, yDistance) * 5);
-    }),
-  );
+      directDistance = Math.min(directDistance, Math.round(Math.hypot(xDistance, yDistance) * 5));
+    }
+  }
+  return directDistance;
 }
 
 export function findNearbyFacilities(
@@ -1000,22 +167,20 @@ export function findNearbyFacilities(
   } = {},
 ): readonly NearbyFacility[] {
   const graph = options.graph ?? STADIUM_GRAPH;
+  const index = getGraphQueryIndex(graph);
   const maximumDistanceMeters = options.maximumDistanceMeters ?? 35;
   const routeIds = new Set(routeNodeIds);
   const allowedKinds = options.kinds === undefined ? undefined : new Set(options.kinds);
 
-  return graph.nodes
-    .filter(
-      (node) =>
-        isFacilityKind(node.kind) && (allowedKinds === undefined || allowedKinds.has(node.kind)),
-    )
+  return index.facilityNodes
+    .filter((node) => allowedKinds === undefined || allowedKinds.has(node.kind))
     .map((node) => ({
       id: node.id,
       name: node.name,
-      kind: node.kind as FacilityKind,
+      kind: node.kind,
       zoneId: node.zoneId,
       accessible: node.accessible,
-      distanceFromRouteMeters: directDistanceToRoute(node, routeIds, graph),
+      distanceFromRouteMeters: directDistanceToRoute(node, routeIds, index),
     }))
     .filter((facility) => facility.distanceFromRouteMeters <= maximumDistanceMeters)
     .sort(

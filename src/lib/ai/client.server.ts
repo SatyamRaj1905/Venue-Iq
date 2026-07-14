@@ -7,8 +7,15 @@ import { getServerEnvironment } from "@/lib/config/env.server";
 
 const GEMINI_ATTEMPT_TIMEOUT_MS = 10_000;
 const GEMINI_TOTAL_TIMEOUT_MS = 12_000;
-const MAX_OUTPUT_TOKENS = 900;
+const MAX_OUTPUT_TOKENS = 512;
 const MAX_ATTEMPTS = 2;
+
+interface GeminiClientCache {
+  readonly apiKey: string;
+  readonly client: GoogleGenAI;
+}
+
+let geminiClientCache: GeminiClientCache | undefined;
 
 export class AiGenerationError extends Error {
   public constructor() {
@@ -56,11 +63,11 @@ function canRetry(error: unknown): boolean {
   return status === undefined || status === 408 || status === 429 || status >= 500;
 }
 
-export async function generateValidatedJsonWith(
+export async function generateValidatedJsonWith<T>(
   generateContent: GenerateContent,
   model: string,
-  request: StructuredGenerationRequest<unknown>,
-): Promise<unknown> {
+  request: StructuredGenerationRequest<T>,
+): Promise<T> {
   const deadline = Date.now() + GEMINI_TOTAL_TIMEOUT_MS;
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
     try {
@@ -97,6 +104,19 @@ export async function generateValidatedJsonWith(
   throw new AiGenerationError();
 }
 
+function getGeminiClient(apiKey: string): GoogleGenAI {
+  if (geminiClientCache?.apiKey === apiKey) {
+    return geminiClientCache.client;
+  }
+
+  const client = new GoogleGenAI({
+    apiKey,
+    httpOptions: { timeout: GEMINI_ATTEMPT_TIMEOUT_MS },
+  });
+  geminiClientCache = { apiKey, client };
+  return client;
+}
+
 export async function generateValidatedJson<T>(
   request: StructuredGenerationRequest<T>,
 ): Promise<T> {
@@ -105,14 +125,10 @@ export async function generateValidatedJson<T>(
     throw new AiGenerationError();
   }
 
-  const client = new GoogleGenAI({
-    apiKey: environment.geminiApiKey,
-    httpOptions: { timeout: GEMINI_ATTEMPT_TIMEOUT_MS },
-  });
-  const result = await generateValidatedJsonWith(
+  const client = getGeminiClient(environment.geminiApiKey);
+  return generateValidatedJsonWith(
     (parameters) => client.models.generateContent(parameters),
     environment.geminiModel,
     request,
   );
-  return request.schema.parse(result);
 }

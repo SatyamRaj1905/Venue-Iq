@@ -1,5 +1,5 @@
 import { fanAssistRequestSchema } from "@/lib/ai/schemas";
-import { assistFan } from "@/lib/ai/service.server";
+import { assistFan } from "@/lib/ai/service/fan.server";
 import { handleAiRoute } from "@/lib/security/aiRoute.server";
 
 export const runtime = "nodejs";

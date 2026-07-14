@@ -50,12 +50,25 @@ export interface ServerEnvironment {
   readonly appUrl: string;
 }
 
-/**
- * Reads server configuration lazily so importing schemas never captures a secret.
- * The returned object must remain inside server-only modules and route handlers.
- */
-export function getServerEnvironment(): ServerEnvironment {
-  const parsed = serverEnvSchema.safeParse({
+interface RawServerEnvironment {
+  readonly NODE_ENV: string | undefined;
+  readonly GEMINI_API_KEY: string | undefined;
+  readonly GEMINI_MODEL: string | undefined;
+  readonly AI_DEMO_MODE: string | undefined;
+  readonly UPSTASH_REDIS_REST_URL: string | undefined;
+  readonly UPSTASH_REDIS_REST_TOKEN: string | undefined;
+  readonly NEXT_PUBLIC_APP_URL: string | undefined;
+}
+
+interface EnvironmentCache {
+  readonly raw: RawServerEnvironment;
+  readonly parsed: ServerEnvironment;
+}
+
+let environmentCache: EnvironmentCache | undefined;
+
+function readRawEnvironment(): RawServerEnvironment {
+  return {
     NODE_ENV: process.env.NODE_ENV,
     GEMINI_API_KEY: process.env.GEMINI_API_KEY,
     GEMINI_MODEL: process.env.GEMINI_MODEL,
@@ -63,7 +76,23 @@ export function getServerEnvironment(): ServerEnvironment {
     UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL,
     UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
-  });
+  };
+}
+
+function environmentsMatch(left: RawServerEnvironment, right: RawServerEnvironment): boolean {
+  return (
+    left.NODE_ENV === right.NODE_ENV &&
+    left.GEMINI_API_KEY === right.GEMINI_API_KEY &&
+    left.GEMINI_MODEL === right.GEMINI_MODEL &&
+    left.AI_DEMO_MODE === right.AI_DEMO_MODE &&
+    left.UPSTASH_REDIS_REST_URL === right.UPSTASH_REDIS_REST_URL &&
+    left.UPSTASH_REDIS_REST_TOKEN === right.UPSTASH_REDIS_REST_TOKEN &&
+    left.NEXT_PUBLIC_APP_URL === right.NEXT_PUBLIC_APP_URL
+  );
+}
+
+function toServerEnvironment(raw: RawServerEnvironment): ServerEnvironment {
+  const parsed = serverEnvSchema.safeParse(raw);
 
   if (!parsed.success) {
     throw new Error("Server environment configuration is invalid.");
@@ -72,13 +101,13 @@ export function getServerEnvironment(): ServerEnvironment {
   const upstash =
     parsed.data.UPSTASH_REDIS_REST_URL !== undefined &&
     parsed.data.UPSTASH_REDIS_REST_TOKEN !== undefined
-      ? {
+      ? Object.freeze({
           url: parsed.data.UPSTASH_REDIS_REST_URL,
           token: parsed.data.UPSTASH_REDIS_REST_TOKEN,
-        }
+        })
       : undefined;
 
-  return {
+  return Object.freeze({
     nodeEnv: parsed.data.NODE_ENV,
     ...(parsed.data.GEMINI_API_KEY === undefined
       ? {}
@@ -87,5 +116,25 @@ export function getServerEnvironment(): ServerEnvironment {
     aiDemoMode: parsed.data.AI_DEMO_MODE === "true",
     ...(upstash === undefined ? {} : { upstash }),
     appUrl: parsed.data.NEXT_PUBLIC_APP_URL,
-  };
+  });
+}
+
+/**
+ * Reads server configuration lazily so importing schemas never captures a secret.
+ * The returned object must remain inside server-only modules and route handlers.
+ */
+export function getServerEnvironment(): ServerEnvironment {
+  const raw = readRawEnvironment();
+  if (environmentCache !== undefined && environmentsMatch(environmentCache.raw, raw)) {
+    return environmentCache.parsed;
+  }
+
+  const parsed = toServerEnvironment(raw);
+  environmentCache = { raw, parsed };
+  return parsed;
+}
+
+/** Clears the warm-instance cache for tests that deliberately replace process.env. */
+export function resetServerEnvironmentForTests(): void {
+  environmentCache = undefined;
 }

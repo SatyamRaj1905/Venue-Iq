@@ -1,5 +1,5 @@
 import { operationsBriefRequestSchema } from "@/lib/ai/schemas";
-import { createOperationsBrief } from "@/lib/ai/service.server";
+import { createOperationsBrief } from "@/lib/ai/service/operations.server";
 import { handleAiRoute } from "@/lib/security/aiRoute.server";
 
 export const runtime = "nodejs";

@@ -15,10 +15,25 @@ export function formatDuration(minutes: number): string {
 }
 
 export function formatUpdatedAt(date: Date, locale = "en"): string {
-  return new Intl.DateTimeFormat(locale, {
+  return updatedAtFormatter(locale).format(date);
+}
+const MAX_CACHED_LOCALES = 16;
+const updatedAtFormatters = new Map<string, Intl.DateTimeFormat>();
+
+function updatedAtFormatter(locale: string): Intl.DateTimeFormat {
+  const cached = updatedAtFormatters.get(locale);
+  if (cached !== undefined) {
+    return cached;
+  }
+  if (updatedAtFormatters.size >= MAX_CACHED_LOCALES) {
+    updatedAtFormatters.clear();
+  }
+  const formatter = new Intl.DateTimeFormat(locale, {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
     timeZone: "UTC",
-  }).format(date);
+  });
+  updatedAtFormatters.set(locale, formatter);
+  return formatter;
 }

@@ -1,5 +1,5 @@
 import { volunteerRequestSchema } from "@/lib/ai/schemas";
-import { assistVolunteer } from "@/lib/ai/service.server";
+import { assistVolunteer } from "@/lib/ai/service/volunteer.server";
 import { handleAiRoute } from "@/lib/security/aiRoute.server";
 
 export const runtime = "nodejs";

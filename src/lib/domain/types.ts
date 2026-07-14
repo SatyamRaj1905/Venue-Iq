@@ -5,6 +5,8 @@
  * a field explicitly says otherwise. Domain values are simulated demo data.
  */
 
+import type { ScenarioId } from "./constants";
+
 export type NodeId = string;
 export type EdgeId = string;
 export type ZoneId = string;
@@ -348,16 +350,6 @@ export interface SustainabilitySnapshot {
   readonly status: SustainabilityStatus;
   readonly simulated: true;
 }
-
-export type ScenarioId =
-  | "normal"
-  | "arrival-surge"
-  | "gate-closure"
-  | "train-disruption"
-  | "heat-alert"
-  | "medical-response"
-  | "accessibility-obstruction"
-  | "waste-overflow";
 
 export interface ScenarioDefinition {
   readonly id: ScenarioId;

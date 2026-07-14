@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useSyncExternalStore } from "react";
-import type { ScenarioId } from "@/lib/content/scenarioOptions";
+import type { ScenarioId } from "@/lib/domain/constants";
 import {
   defaultSharedScenario,
   loadSharedScenario,

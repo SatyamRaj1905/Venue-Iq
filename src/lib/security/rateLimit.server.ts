@@ -9,6 +9,7 @@ import { getServerEnvironment } from "@/lib/config/env.server";
 
 const LIMIT = 20;
 const WINDOW_MS = 60_000;
+const MAX_EPHEMERAL_ENTRIES = 1_000;
 
 interface LocalWindow {
   count: number;
@@ -23,6 +24,15 @@ export interface RateLimitResult {
 }
 
 const localWindows = new Map<string, LocalWindow>();
+const upstashEphemeralCache = new Map<string, number>();
+
+interface UpstashLimiterCache {
+  readonly url: string;
+  readonly token: string;
+  readonly limiter: Ratelimit;
+}
+
+let upstashLimiterCache: UpstashLimiterCache | undefined;
 
 export class RateLimitUnavailableError extends Error {
   public constructor() {
@@ -80,7 +90,37 @@ function createUpstashLimiter(url: string, token: string): Ratelimit {
     limiter: Ratelimit.slidingWindow(LIMIT, "1 m"),
     analytics: false,
     prefix: "venueiq:ai",
+    ephemeralCache: upstashEphemeralCache,
   });
+}
+
+function getUpstashLimiter(url: string, token: string): Ratelimit {
+  if (upstashLimiterCache?.url === url && upstashLimiterCache.token === token) {
+    return upstashLimiterCache.limiter;
+  }
+
+  upstashEphemeralCache.clear();
+  const limiter = createUpstashLimiter(url, token);
+  upstashLimiterCache = { url, token, limiter };
+  return limiter;
+}
+
+function pruneEphemeralCache(now = Date.now()): void {
+  if (upstashEphemeralCache.size < MAX_EPHEMERAL_ENTRIES) {
+    return;
+  }
+  for (const [key, reset] of upstashEphemeralCache) {
+    if (reset <= now) {
+      upstashEphemeralCache.delete(key);
+    }
+  }
+  while (upstashEphemeralCache.size >= MAX_EPHEMERAL_ENTRIES) {
+    const oldestKey = upstashEphemeralCache.keys().next().value as string | undefined;
+    if (oldestKey === undefined) {
+      break;
+    }
+    upstashEphemeralCache.delete(oldestKey);
+  }
 }
 
 export async function checkAiRateLimit(request: Request, scope: string): Promise<RateLimitResult> {
@@ -94,7 +134,8 @@ export async function checkAiRateLimit(request: Request, scope: string): Promise
   }
 
   try {
-    const limiter = createUpstashLimiter(environment.upstash.url, environment.upstash.token);
+    pruneEphemeralCache();
+    const limiter = getUpstashLimiter(environment.upstash.url, environment.upstash.token);
     const result = await limiter.limit(identifier);
     return {
       success: result.success,
@@ -120,4 +161,6 @@ export function rateLimitHeaders(result: RateLimitResult): HeadersInit {
 
 export function resetLocalRateLimitForTests(): void {
   localWindows.clear();
+  upstashEphemeralCache.clear();
+  upstashLimiterCache = undefined;
 }

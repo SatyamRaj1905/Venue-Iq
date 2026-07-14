@@ -1,0 +1,229 @@
+/* Impact */
+
+.impact-intro {
+  display: grid;
+  grid-template-columns: 1fr 0.8fr;
+  gap: 60px;
+  align-items: end;
+  margin-bottom: 45px;
+  padding-bottom: 35px;
+  border-bottom: 1px solid var(--line);
+}
+
+.impact-intro h2 {
+  margin-bottom: 0;
+  font-size: clamp(2rem, 4vw, 3.6rem);
+}
+
+.impact-intro > p {
+  margin-bottom: 0;
+  color: var(--muted);
+}
+
+.impact-card-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.impact-card {
+  display: grid;
+  min-height: 320px;
+  align-content: start;
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: linear-gradient(145deg, rgba(14, 38, 55, 0.72), rgba(6, 21, 34, 0.8));
+}
+
+.impact-card__visual {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 42px;
+}
+
+.impact-card__visual > span {
+  display: grid;
+  width: 45px;
+  height: 45px;
+  place-items: center;
+  border: 1px solid rgba(73, 231, 255, 0.19);
+  border-radius: 13px;
+  color: var(--cyan);
+  background: var(--cyan-soft);
+}
+
+.impact-card__visual i {
+  color: rgba(145, 168, 184, 0.38);
+  font-family: var(--font-mono);
+  font-size: 0.63rem;
+  font-style: normal;
+}
+
+.impact-card h3 {
+  margin-bottom: 10px;
+  font-size: 1.1rem;
+}
+
+.impact-card > p {
+  min-height: 75px;
+  margin-bottom: 24px;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.impact-card__metric {
+  display: grid;
+  margin-top: auto;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.impact-card__metric strong {
+  color: var(--cyan);
+  font-size: 2rem;
+  letter-spacing: -0.06em;
+  line-height: 1;
+}
+
+.impact-card__metric span {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 0.59rem;
+}
+
+.impact-responsibility {
+  display: grid;
+  grid-template-columns: 0.85fr 1.15fr;
+  gap: clamp(45px, 7vw, 85px);
+  align-items: center;
+  margin-top: clamp(80px, 10vw, 130px);
+  padding: clamp(30px, 5vw, 60px);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background: linear-gradient(135deg, rgba(13, 45, 61, 0.72), rgba(7, 23, 37, 0.85));
+}
+
+.impact-responsibility__copy h2 {
+  margin: 18px 0;
+  font-size: clamp(2rem, 4vw, 3.4rem);
+}
+
+.impact-responsibility__copy > p {
+  color: var(--muted);
+}
+
+.impact-responsibility__copy ul {
+  display: grid;
+  gap: 7px;
+  margin: 24px 0 28px;
+  padding: 0;
+  color: var(--text-soft);
+  font-size: 0.7rem;
+  list-style: none;
+}
+
+.impact-responsibility__copy li {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.impact-responsibility__copy li svg {
+  color: var(--lime);
+}
+
+.responsibility-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.responsibility-grid article {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  min-height: 150px;
+  align-content: start;
+  padding: 17px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: rgba(4, 18, 30, 0.56);
+}
+
+.responsibility-grid article > span {
+  display: grid;
+  width: 35px;
+  height: 35px;
+  place-items: center;
+  border-radius: 10px;
+  color: var(--cyan);
+  background: var(--cyan-soft);
+}
+
+.responsibility-grid h3 {
+  margin: 6px 0 7px;
+  font-size: 0.85rem;
+}
+
+.responsibility-grid p {
+  margin-bottom: 0;
+  color: var(--muted);
+  font-size: 0.65rem;
+}
+
+.impact-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 40px;
+  margin-top: 70px;
+  padding-top: 50px;
+  border-top: 1px solid var(--line);
+}
+
+.impact-cta h2 {
+  margin-bottom: 0;
+  font-size: clamp(1.8rem, 3.6vw, 3.2rem);
+}
+
+@media (max-width: 1180px) {
+  .impact-card-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 960px) {
+  .impact-responsibility {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .impact-intro {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .impact-card-grid {
+    grid-template-columns: 1fr;
+  }
+  .impact-card {
+    min-height: 270px;
+  }
+  .impact-card > p {
+    min-height: 0;
+  }
+  .responsibility-grid {
+    grid-template-columns: 1fr;
+  }
+  .impact-cta {
+    display: grid;
+  }
+}
+
+@media (max-width: 480px) {
+  .responsibility-grid article {
+    min-height: 0;
+  }
+}

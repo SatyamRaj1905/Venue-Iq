@@ -30,7 +30,7 @@ describe("Gemini structured generation", () => {
     expect(call.model).toBe("configured-model");
     expect(call.config).toMatchObject({
       temperature: 0.15,
-      maxOutputTokens: 900,
+      maxOutputTokens: 512,
       responseMimeType: "application/json",
       candidateCount: 1,
       thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },

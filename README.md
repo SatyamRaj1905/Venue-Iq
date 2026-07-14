@@ -45,7 +45,7 @@ model may only turn that trusted grounding into structured, accessible language.
 
 | Role workspaces | Seeded scenarios | Supported languages | Automated checks |
 | :-------------: | :--------------: | :-----------------: | :--------------: |
-|      **3**      |      **8**       |        **6**        |     **170**      |
+|      **3**      |      **8**       |        **6**        |     **195**      |
 
 The three connected workspaces are complemented by a cross-role Impact dashboard. The eight
 repeatable scenarios cover normal operations, an arrival surge, Gate C closure, train disruption,
@@ -134,10 +134,15 @@ Read the full threat model and controls in [SECURITY.md](SECURITY.md).
 
 ## Engineering highlights
 
-- **Constraint-aware routing:** weighted Dijkstra routing accounts for closed edges,
-  accessible-path obstructions, distance, crowd pressure, quietness, and step-free requirements.
+- **Constraint-aware routing:** indexed, binary-heap Dijkstra routing runs in
+  `O((V + E) log V)` while accounting for closures, accessibility obstructions, distance, crowd
+  pressure, quietness, and step-free requirements.
 - **One shared simulation:** all role pages derive their view from the same seeded stadium model,
   keeping demonstrations synchronized and repeatable.
+- **Measured efficiency:** route-scoped CSS, lazy client validation, cancellable requests, warm
+  server caches, and enforced production bundle budgets prevent silent regressions.
+- **Maintainability gates:** production code is continuously checked against complexity 12,
+  80 lines per function, 500 lines per file, strict TypeScript, and zero lint warnings.
 - **Accessible by construction:** semantic landmarks, keyboard navigation, visible focus, 44 px
   targets, live regions, reduced motion, high contrast, large text, RTL content, and a complete
   ordered alternative to the SVG map.
@@ -153,7 +158,7 @@ Read the full threat model and controls in [SECURITY.md](SECURITY.md).
 | Layer         | Implementation                                                                 |
 | ------------- | ------------------------------------------------------------------------------ |
 | Application   | Next.js 16 App Router, React 19, TypeScript 5.9                                |
-| Styling       | Tailwind CSS 4 plus accessible custom CSS and local SVG visualization          |
+| Styling       | Accessible local CSS design system and purpose-built SVG visualization         |
 | Generative AI | Google Gemini through the server-only `@google/genai` SDK                      |
 | Validation    | Zod 4 request and response contracts plus Gemini JSON Schema output            |
 | Domain logic  | Pure TypeScript venue graph, routing, scenario, operations, and impact modules |
@@ -168,13 +173,13 @@ The current release gate completes successfully with `npm run verify:full`:
 | Gate                                      |                      Verified result |
 | ----------------------------------------- | -----------------------------------: |
 | Formatting, ESLint, and strict TypeScript |  Passed with zero warnings or errors |
-| Unit, component, and integration tests    | **156 / 156 passed** across 20 files |
+| Unit, component, and integration tests    | **181 / 181 passed** across 24 files |
 | End-to-end journeys                       |                   **10 / 10 passed** |
 | Automated accessibility scans             |                     **4 / 4 passed** |
-| Statement coverage                        |                           **94.87%** |
-| Line coverage                             |                           **94.81%** |
-| Function coverage                         |                           **93.06%** |
-| Branch coverage                           |                           **87.77%** |
+| Statement coverage                        |                           **96.47%** |
+| Line coverage                             |                           **96.52%** |
+| Function coverage                         |                           **96.96%** |
+| Branch coverage                           |                           **89.32%** |
 | Production dependency audit               |          **0 known vulnerabilities** |
 
 The browser suite includes accessible routing, multilingual and Arabic RTL output, scenario
@@ -288,6 +293,7 @@ tests/
 | [ARCHITECTURE.md](ARCHITECTURE.md)   | System boundaries, data flow, domain model, and AI pipeline                |
 | [RUNBOOK.md](RUNBOOK.md)             | Local setup, deployment, post-deploy checks, and troubleshooting           |
 | [TESTING.md](TESTING.md)             | Test strategy, commands, coverage, and manual verification                 |
+| [PERFORMANCE.md](PERFORMANCE.md)     | Reproducible route bundle measurements and enforced regression budgets     |
 | [SECURITY.md](SECURITY.md)           | Threat model, data handling, headers, and production controls              |
 | [ACCESSIBILITY.md](ACCESSIBILITY.md) | WCAG-oriented design decisions and assistive-technology checks             |
 | [JUDGING.md](JUDGING.md)             | Evidence mapped to code quality, security, efficiency, testing, and impact |

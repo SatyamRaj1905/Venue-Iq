@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { AppShell } from "@/components/layout/AppShell";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { ImpactPageContent } from "@/components/impact/ImpactPageContent";
+import "./impact.css";
 
 export const metadata: Metadata = {
   title: "Impact & Responsible AI",

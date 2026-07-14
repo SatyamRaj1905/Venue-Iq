@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { AppShell } from "@/components/layout/AppShell";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { OperationsClient } from "@/components/operations/OperationsClient";
+import "./operations.css";
 
 export const metadata: Metadata = {
   title: "Operations Command Center",

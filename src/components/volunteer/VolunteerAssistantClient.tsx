@@ -8,6 +8,7 @@ import type {
 } from "@/lib/ai/schemas";
 import type { SupportedLanguage } from "@/lib/content/languageOptions";
 import { createVolunteerFallback } from "@/lib/content/volunteerFallback";
+import { postJson, type PostJsonFailure, type RuntimeSchema } from "@/lib/http/postJson";
 import { Alert } from "@/components/ui/Alert";
 import { Card } from "@/components/ui/Card";
 import { SopResponse, type VolunteerResponseState } from "./SopResponse";
@@ -18,6 +19,32 @@ import { useSharedScenario } from "@/components/layout/useSharedScenario";
 
 const initialQuestion =
   "A family speaking Arabic is looking for the nearest accessible entrance. What should I do?";
+
+async function loadVolunteerEnvelopeSchema(): Promise<
+  RuntimeSchema<SuccessEnvelope<VolunteerAssistanceResponse>>
+> {
+  const { successEnvelopeSchema, volunteerAssistanceResponseSchema } =
+    await import("@/lib/ai/schemas");
+  return successEnvelopeSchema(volunteerAssistanceResponseSchema);
+}
+
+function volunteerFailureReason(failure: PostJsonFailure): string {
+  if (failure.kind === "http-error" && failure.status === 429) {
+    return "The live assistant request limit was reached.";
+  }
+  if (failure.kind === "timeout") {
+    return "The request was safely cancelled after 14 seconds.";
+  }
+  if (failure.kind === "invalid-response") {
+    return "The live response could not be validated, so trusted local guidance is shown.";
+  }
+  if (failure.kind === "network-error") {
+    return typeof navigator !== "undefined" && !navigator.onLine
+      ? "This device appears to be offline."
+      : "The venue service could not be reached.";
+  }
+  return "Gemini is temporarily unavailable.";
+}
 
 function responseAnnouncement(state: VolunteerResponseState): string {
   switch (state.status) {
@@ -30,6 +57,65 @@ function responseAnnouncement(state: VolunteerResponseState): string {
     case "fallback":
       return `The live assistant is unavailable. Trusted fallback guidance is ready in ${state.response.language}.`;
   }
+}
+
+interface VolunteerAssistantViewProps {
+  readonly scenario: VolunteerRequest["scenario"];
+  readonly activeScenario: string;
+  readonly role: VolunteerRequest["role"];
+  readonly topic: VolunteerRequest["topic"];
+  readonly question: string;
+  readonly language: SupportedLanguage;
+  readonly validationError: string | undefined;
+  readonly responseState: VolunteerResponseState;
+  readonly onRoleChange: (role: VolunteerRequest["role"]) => void;
+  readonly onTopicChange: (topic: VolunteerRequest["topic"]) => void;
+  readonly onQuestionChange: (question: string) => void;
+  readonly onLanguageChange: (language: SupportedLanguage) => void;
+  readonly onSubmit: () => void;
+}
+
+function VolunteerAssistantView(props: VolunteerAssistantViewProps) {
+  const isLoading = props.responseState.status === "loading";
+  return (
+    <div className="stack">
+      <div className="shared-scenario">
+        <Badge tone={props.scenario === "normal" ? "positive" : "warning"}>
+          Shared scenario: {props.activeScenario}
+        </Badge>
+        <span>Use current venue alerts when guiding guests</span>
+      </div>
+      <div className="volunteer-workspace">
+        <div className="stack">
+          <Alert title="Do not improvise during emergencies" tone="critical">
+            Contact the venue emergency team immediately. This assistant supports procedure recall
+            and translation; it does not replace emergency command.
+          </Alert>
+          <Card padding="large">
+            <VolunteerForm
+              role={props.role}
+              topic={props.topic}
+              question={props.question}
+              language={props.language}
+              isLoading={isLoading}
+              validationError={props.validationError}
+              onRoleChange={props.onRoleChange}
+              onTopicChange={props.onTopicChange}
+              onQuestionChange={props.onQuestionChange}
+              onLanguageChange={props.onLanguageChange}
+              onSubmit={props.onSubmit}
+            />
+          </Card>
+        </div>
+        <p className="sr-only" aria-live="polite" aria-atomic="true">
+          {responseAnnouncement(props.responseState)}
+        </p>
+        <div aria-busy={isLoading}>
+          <SopResponse state={props.responseState} onRetry={props.onSubmit} />
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export function VolunteerAssistantClient() {
@@ -55,44 +141,26 @@ export function VolunteerAssistantClient() {
       topic,
       scenario,
     };
-    const controller = new AbortController();
-    const timeout = window.setTimeout(() => controller.abort(), 14_000);
 
-    try {
-      const response = await fetch("/api/ai/volunteer", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(request),
-        signal: controller.signal,
-      });
-      if (!response.ok) {
-        setResponseState({
-          status: "fallback",
-          response: createVolunteerFallback(request.language, request.topic, request.scenario),
-          reason:
-            response.status === 429
-              ? "The live assistant request limit was reached."
-              : "Gemini is temporarily unavailable.",
-        });
-        return;
-      }
-      const payload = (await response.json()) as SuccessEnvelope<VolunteerAssistanceResponse>;
-      setResponseState({ status: "ready", response: payload.data, mode: payload.meta.mode });
-    } catch (error: unknown) {
-      const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
-      const isTimeout = error instanceof DOMException && error.name === "AbortError";
+    const result = await postJson({
+      url: "/api/ai/volunteer",
+      body: request,
+      responseSchema: loadVolunteerEnvelopeSchema,
+    });
+    if (result.ok) {
       setResponseState({
-        status: "fallback",
-        response: createVolunteerFallback(request.language, request.topic, request.scenario),
-        reason: isOffline
-          ? "This device appears to be offline."
-          : isTimeout
-            ? "The request was safely cancelled after 14 seconds."
-            : "The venue service could not be reached.",
+        status: "ready",
+        response: result.data.data,
+        mode: result.data.meta.mode,
       });
-    } finally {
-      window.clearTimeout(timeout);
+      return;
     }
+
+    setResponseState({
+      status: "fallback",
+      response: createVolunteerFallback(request.language, request.topic, request.scenario),
+      reason: volunteerFailureReason(result),
+    });
   }
 
   function submit(): void {
@@ -103,42 +171,20 @@ export function VolunteerAssistantClient() {
     scenarioOptions.find((option) => option.id === scenario)?.label ?? scenario;
 
   return (
-    <div className="stack">
-      <div className="shared-scenario">
-        <Badge tone={scenario === "normal" ? "positive" : "warning"}>
-          Shared scenario: {activeScenario}
-        </Badge>
-        <span>Use current venue alerts when guiding guests</span>
-      </div>
-      <div className="volunteer-workspace">
-        <div className="stack">
-          <Alert title="Do not improvise during emergencies" tone="critical">
-            Contact the venue emergency team immediately. This assistant supports procedure recall
-            and translation; it does not replace emergency command.
-          </Alert>
-          <Card padding="large">
-            <VolunteerForm
-              role={role}
-              topic={topic}
-              question={question}
-              language={language}
-              isLoading={responseState.status === "loading"}
-              validationError={validationError}
-              onRoleChange={setRole}
-              onTopicChange={setTopic}
-              onQuestionChange={setQuestion}
-              onLanguageChange={setLanguage}
-              onSubmit={submit}
-            />
-          </Card>
-        </div>
-        <p className="sr-only" aria-live="polite" aria-atomic="true">
-          {responseAnnouncement(responseState)}
-        </p>
-        <div aria-busy={responseState.status === "loading"}>
-          <SopResponse state={responseState} onRetry={submit} />
-        </div>
-      </div>
-    </div>
+    <VolunteerAssistantView
+      scenario={scenario}
+      activeScenario={activeScenario}
+      role={role}
+      topic={topic}
+      question={question}
+      language={language}
+      validationError={validationError}
+      responseState={responseState}
+      onRoleChange={setRole}
+      onTopicChange={setTopic}
+      onQuestionChange={setQuestion}
+      onLanguageChange={setLanguage}
+      onSubmit={submit}
+    />
   );
 }

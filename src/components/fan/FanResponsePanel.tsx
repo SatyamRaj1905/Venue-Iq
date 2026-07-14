@@ -31,13 +31,117 @@ interface FanResponsePanelProps {
   onFollowUp: (question: string) => void;
 }
 
+type ResponseMode = "gemini" | "demo" | "fallback";
+
+function GuidanceAnswer({
+  response,
+  mode,
+}: {
+  response: FanAssistanceResponse;
+  mode: ResponseMode;
+}) {
+  const title =
+    response.intent === "transport"
+      ? "Your grounded transport options"
+      : response.intent === "facility"
+        ? "Your grounded facility guidance"
+        : "Your grounded route";
+  const modeLabel =
+    mode === "gemini" ? "Gemini + tools" : mode === "demo" ? "Demo response" : "Safe fallback";
+
+  return (
+    <Card className="ai-answer" tone="cyan">
+      <div className="ai-answer__heading">
+        <span className="ai-answer__icon">
+          <Bot size={21} aria-hidden="true" />
+        </span>
+        <div>
+          <p className="eyebrow">VenueIQ guidance</p>
+          <h2>{title}</h2>
+        </div>
+        <div className="ai-answer__status">
+          <Badge tone={mode === "gemini" ? "info" : "warning"}>{modeLabel}</Badge>
+          <span>{Math.round(response.confidence * 100)}% confidence</span>
+        </div>
+      </div>
+      <p className="ai-answer__summary">{response.summary}</p>
+      {response.accessibilityNotes.length > 0 ? (
+        <ul className="ai-answer__notes" aria-label="Accessibility notes">
+          {response.accessibilityNotes.map((note) => (
+            <li key={note}>
+              <CheckCircle2 size={15} aria-hidden="true" /> {note}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </Card>
+  );
+}
+
+function GroundedRoute({ response }: { response: FanAssistanceResponse }) {
+  if (!response.route) {
+    return (
+      <Alert title="No route was needed" tone="info">
+        The response contains general venue guidance only.
+      </Alert>
+    );
+  }
+
+  return (
+    <>
+      <RouteSummary route={response.route} />
+      <div className="fan-map-layout">
+        <Card padding="small">
+          <StadiumMap route={response.route} />
+          <AccessibleMapList route={response.route} />
+        </Card>
+        <Card padding="small">
+          <RouteSteps route={response.route} />
+        </Card>
+      </div>
+      <div className="fan-detail-grid">
+        <Card padding="small">
+          <NearbyFacilities facilities={response.route.nearbyFacilities} />
+        </Card>
+        <Card padding="small">
+          <FanAlerts alerts={response.alerts} />
+        </Card>
+      </div>
+    </>
+  );
+}
+
+function FollowUpCard({
+  questions,
+  onFollowUp,
+}: {
+  questions: readonly string[];
+  onFollowUp: (question: string) => void;
+}) {
+  return (
+    <Card className="follow-up" padding="small">
+      <div>
+        <Sparkles size={18} aria-hidden="true" />
+        <strong>Continue with a trusted follow-up</strong>
+      </div>
+      <div className="suggestion-chips">
+        {questions.map((question) => (
+          <button type="button" key={question} onClick={() => onFollowUp(question)}>
+            {question}
+          </button>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
 function ResponseContent({
   response,
   mode,
   onFollowUp,
 }: {
   response: FanAssistanceResponse;
-  mode: "gemini" | "demo" | "fallback";
+  mode: ResponseMode;
   onFollowUp: (question: string) => void;
 }) {
   return (
@@ -46,70 +150,8 @@ function ResponseContent({
       dir={getLanguageDirection(response.language)}
       lang={response.language}
     >
-      <Card className="ai-answer" tone="cyan">
-        <div className="ai-answer__heading">
-          <span className="ai-answer__icon">
-            <Bot size={21} aria-hidden="true" />
-          </span>
-          <div>
-            <p className="eyebrow">VenueIQ guidance</p>
-            <h2>
-              {response.intent === "transport"
-                ? "Your grounded transport options"
-                : response.intent === "facility"
-                  ? "Your grounded facility guidance"
-                  : "Your grounded route"}
-            </h2>
-          </div>
-          <div className="ai-answer__status">
-            <Badge tone={mode === "gemini" ? "info" : "warning"}>
-              {mode === "gemini"
-                ? "Gemini + tools"
-                : mode === "demo"
-                  ? "Demo response"
-                  : "Safe fallback"}
-            </Badge>
-            <span>{Math.round(response.confidence * 100)}% confidence</span>
-          </div>
-        </div>
-        <p className="ai-answer__summary">{response.summary}</p>
-        {response.accessibilityNotes.length > 0 ? (
-          <ul className="ai-answer__notes" aria-label="Accessibility notes">
-            {response.accessibilityNotes.map((note) => (
-              <li key={note}>
-                <CheckCircle2 size={15} aria-hidden="true" /> {note}
-              </li>
-            ))}
-          </ul>
-        ) : null}
-      </Card>
-
-      {response.route ? (
-        <>
-          <RouteSummary route={response.route} />
-          <div className="fan-map-layout">
-            <Card padding="small">
-              <StadiumMap route={response.route} />
-              <AccessibleMapList route={response.route} />
-            </Card>
-            <Card padding="small">
-              <RouteSteps route={response.route} />
-            </Card>
-          </div>
-          <div className="fan-detail-grid">
-            <Card padding="small">
-              <NearbyFacilities facilities={response.route.nearbyFacilities} />
-            </Card>
-            <Card padding="small">
-              <FanAlerts alerts={response.alerts} />
-            </Card>
-          </div>
-        </>
-      ) : (
-        <Alert title="No route was needed" tone="info">
-          The response contains general venue guidance only.
-        </Alert>
-      )}
+      <GuidanceAnswer response={response} mode={mode} />
+      <GroundedRoute response={response} />
 
       {response.transportOptions && response.transportOptions.length > 0 ? (
         <Card padding="small">
@@ -117,19 +159,7 @@ function ResponseContent({
         </Card>
       ) : null}
 
-      <Card className="follow-up" padding="small">
-        <div>
-          <Sparkles size={18} aria-hidden="true" />
-          <strong>Continue with a trusted follow-up</strong>
-        </div>
-        <div className="suggestion-chips">
-          {response.nextSteps.map((question) => (
-            <button type="button" key={question} onClick={() => onFollowUp(question)}>
-              {question}
-            </button>
-          ))}
-        </div>
-      </Card>
+      <FollowUpCard questions={response.nextSteps} onFollowUp={onFollowUp} />
       {response.handoffRequired ? (
         <Alert title="Venue staff handoff recommended" tone="warning">
           Ask the nearest assistance host to confirm the next step before continuing.

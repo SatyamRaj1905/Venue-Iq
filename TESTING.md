@@ -18,6 +18,7 @@ npm run test            # Vitest with coverage
 npm run test:watch
 npm run test:e2e
 npm run test:a11y
+npm run bundle:check   # enforce initial JS/CSS budgets after a production build
 npm run verify
 npm run verify:full
 ```
@@ -34,6 +35,10 @@ Coverage thresholds for meaningful pure application logic are:
 - Branches: 85%
 
 Framework-generated declarations, pure type barrels, and Playwright artifacts are excluded. A high percentage does not replace scenario coverage or manual review.
+
+Production maintainability is also enforced during linting: complexity 12, 80 lines per function,
+500 nonblank lines per file, strict TypeScript, and zero warnings. Route asset budgets are described
+in `PERFORMANCE.md` and run in local, CI, and Vercel release gates.
 
 ## Mocked boundaries
 

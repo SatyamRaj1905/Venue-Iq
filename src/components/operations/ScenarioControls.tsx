@@ -1,4 +1,17 @@
-import { Lock, RotateCcw, Unlock } from "lucide-react";
+import {
+  Accessibility,
+  CircleAlert,
+  CloudSun,
+  DoorClosed,
+  HeartPulse,
+  Lock,
+  RotateCcw,
+  Sparkles,
+  TrainFront,
+  Trash2,
+  Unlock,
+  type LucideIcon,
+} from "lucide-react";
 import { scenarioOptions, type ScenarioId } from "@/lib/content/scenarioOptions";
 import { Button } from "@/components/ui/Button";
 
@@ -9,6 +22,17 @@ interface ScenarioControlsProps {
   onSelect: (scenario: ScenarioId) => void;
   onPauseChange: (paused: boolean) => void;
 }
+
+const SCENARIO_ICONS: Readonly<Record<ScenarioId, LucideIcon>> = {
+  normal: Sparkles,
+  "arrival-surge": CircleAlert,
+  "gate-closure": DoorClosed,
+  "train-disruption": TrainFront,
+  "heat-alert": CloudSun,
+  "medical-response": HeartPulse,
+  "accessibility-obstruction": Accessibility,
+  "waste-overflow": Trash2,
+};
 
 export function ScenarioControls({
   activeScenario,
@@ -41,8 +65,9 @@ export function ScenarioControls({
         </Button>
       </div>
       <div className="scenario-grid" aria-label="Choose a simulated venue scenario">
-        {scenarioOptions.map(({ id, shortLabel, description, icon: Icon }) => {
+        {scenarioOptions.map(({ id, shortLabel, description }) => {
           const isActive = id === activeScenario;
+          const Icon = SCENARIO_ICONS[id];
           return (
             <button
               aria-pressed={isActive}

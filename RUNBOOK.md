@@ -63,6 +63,7 @@ npm run lint
 npm run type-check
 npm run test
 npm run build
+npm run bundle:check
 ```
 
 Browser tests:

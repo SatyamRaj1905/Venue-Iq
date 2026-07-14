@@ -6,7 +6,7 @@ import {
   createVolunteerFallback,
 } from "@/lib/ai/fallback";
 import type { FanAssistRequest, OperationsBriefRequest, VolunteerRequest } from "@/lib/ai/schemas";
-import { getVenueSop } from "@/lib/ai/tools";
+import { getOperationsSnapshot, getVenueSop } from "@/lib/ai/tools";
 import type { FanGrounding, OperationsGrounding } from "@/lib/ai/tools";
 import { createVolunteerFallback as createClientVolunteerFallback } from "@/lib/content/volunteerFallback";
 
@@ -88,6 +88,8 @@ describe("deterministic AI fallback", () => {
         },
       ],
       snapshot: {
+        seed: 2_026,
+        tick: 0,
         occupancyPercentage: 70,
         zones: [],
         gates: [],
@@ -107,6 +109,20 @@ describe("deterministic AI fallback", () => {
       confidence: 0.95,
     });
     expect(result.priorityActions[0]?.supportingMetrics.length).toBeGreaterThan(0);
+  });
+
+  it("grounds operations guidance in the client-visible simulation coordinates", () => {
+    const request: OperationsBriefRequest = {
+      scenario: "arrival-surge",
+      language: "en",
+      seed: 4_204,
+      tick: 7,
+    };
+    const first = getOperationsSnapshot(request);
+    const repeated = getOperationsSnapshot(request);
+
+    expect(first.snapshot).toMatchObject({ seed: 4_204, tick: 7 });
+    expect(repeated.snapshot).toEqual(first.snapshot);
   });
 
   it("uses trusted SOP escalation and authority boundaries", () => {

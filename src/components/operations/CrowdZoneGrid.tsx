@@ -18,6 +18,92 @@ function zoneName(zoneId: string): string {
   return STADIUM_ZONES.find((zone) => zone.id === zoneId)?.name ?? zoneId;
 }
 
+function ZoneCards({
+  snapshot,
+  affectedZoneIds,
+}: CrowdZoneGridProps & { affectedZoneIds: ReadonlySet<string> }) {
+  return (
+    <div className="zone-map" role="region" aria-label="Crowd zone cards" tabIndex={0}>
+      {snapshot.zones.map((zone) => {
+        const isAffected = affectedZoneIds.has(zone.zoneId);
+        return (
+          <div
+            className={`zone-tile zone-tile--${zone.status}${isAffected ? " zone-tile--affected" : ""}`}
+            key={zone.zoneId}
+            style={
+              { "--zone-level": `${Math.min(100, zone.occupancyPercentage)}%` } as CSSProperties
+            }
+          >
+            <span className="zone-tile__fill" aria-hidden="true" />
+            <div>
+              <strong>{zoneName(zone.zoneId)}</strong>
+              <span>{Math.round(zone.occupancyPercentage)}% occupied</span>
+              {isAffected ? (
+                <span className="zone-tile__impact">
+                  <TriangleAlert size={12} aria-hidden="true" /> Scenario affected
+                </span>
+              ) : null}
+            </div>
+            <Badge tone={statusTone(zone.status)}>{zone.status}</Badge>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function CrowdMetricsTable({
+  snapshot,
+  affectedZoneIds,
+}: CrowdZoneGridProps & { affectedZoneIds: ReadonlySet<string> }) {
+  return (
+    <div className="table-scroll" role="region" aria-label="Detailed crowd metrics" tabIndex={0}>
+      <table className="data-table">
+        <caption className="sr-only">Accessible table of crowd conditions by stadium zone</caption>
+        <thead>
+          <tr>
+            <th scope="col">Zone</th>
+            <th scope="col">Occupancy</th>
+            <th scope="col">Queue</th>
+            <th scope="col">Risk</th>
+            <th scope="col">Status</th>
+            <th scope="col">Scenario impact</th>
+          </tr>
+        </thead>
+        <tbody>
+          {snapshot.zones.map((zone) => {
+            const isAffected = affectedZoneIds.has(zone.zoneId);
+            return (
+              <tr key={zone.zoneId}>
+                <th scope="row">
+                  <UsersRound size={15} aria-hidden="true" /> {zoneName(zone.zoneId)}
+                </th>
+                <td>{Math.round(zone.occupancyPercentage)}%</td>
+                <td>{Math.round(zone.queueMinutes)} min</td>
+                <td>
+                  {zone.riskScore} <ArrowRight size={13} aria-hidden="true" />
+                </td>
+                <td>
+                  <Badge tone={statusTone(zone.status)}>{zone.status}</Badge>
+                </td>
+                <td>
+                  {isAffected ? (
+                    <span className="data-table__impact">
+                      <TriangleAlert size={13} aria-hidden="true" /> Affected
+                    </span>
+                  ) : (
+                    "Baseline"
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export function CrowdZoneGrid({ snapshot }: CrowdZoneGridProps) {
   const affectedZoneIds = new Set(snapshot.affectedZoneIds);
 
@@ -30,78 +116,8 @@ export function CrowdZoneGrid({ snapshot }: CrowdZoneGridProps) {
         </div>
         <Badge tone="info">{snapshot.zones.length} zones</Badge>
       </div>
-      <div className="zone-map" role="region" aria-label="Crowd zone cards" tabIndex={0}>
-        {snapshot.zones.map((zone) => {
-          const isAffected = affectedZoneIds.has(zone.zoneId);
-          return (
-            <div
-              className={`zone-tile zone-tile--${zone.status}${isAffected ? " zone-tile--affected" : ""}`}
-              key={zone.zoneId}
-              style={
-                { "--zone-level": `${Math.min(100, zone.occupancyPercentage)}%` } as CSSProperties
-              }
-            >
-              <span className="zone-tile__fill" aria-hidden="true" />
-              <div>
-                <strong>{zoneName(zone.zoneId)}</strong>
-                <span>{Math.round(zone.occupancyPercentage)}% occupied</span>
-                {isAffected ? (
-                  <span className="zone-tile__impact">
-                    <TriangleAlert size={12} aria-hidden="true" /> Scenario affected
-                  </span>
-                ) : null}
-              </div>
-              <Badge tone={statusTone(zone.status)}>{zone.status}</Badge>
-            </div>
-          );
-        })}
-      </div>
-      <div className="table-scroll" role="region" aria-label="Detailed crowd metrics" tabIndex={0}>
-        <table className="data-table">
-          <caption className="sr-only">
-            Accessible table of crowd conditions by stadium zone
-          </caption>
-          <thead>
-            <tr>
-              <th scope="col">Zone</th>
-              <th scope="col">Occupancy</th>
-              <th scope="col">Queue</th>
-              <th scope="col">Risk</th>
-              <th scope="col">Status</th>
-              <th scope="col">Scenario impact</th>
-            </tr>
-          </thead>
-          <tbody>
-            {snapshot.zones.map((zone) => {
-              const isAffected = affectedZoneIds.has(zone.zoneId);
-              return (
-                <tr key={zone.zoneId}>
-                  <th scope="row">
-                    <UsersRound size={15} aria-hidden="true" /> {zoneName(zone.zoneId)}
-                  </th>
-                  <td>{Math.round(zone.occupancyPercentage)}%</td>
-                  <td>{Math.round(zone.queueMinutes)} min</td>
-                  <td>
-                    {zone.riskScore} <ArrowRight size={13} aria-hidden="true" />
-                  </td>
-                  <td>
-                    <Badge tone={statusTone(zone.status)}>{zone.status}</Badge>
-                  </td>
-                  <td>
-                    {isAffected ? (
-                      <span className="data-table__impact">
-                        <TriangleAlert size={13} aria-hidden="true" /> Affected
-                      </span>
-                    ) : (
-                      "Baseline"
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      <ZoneCards snapshot={snapshot} affectedZoneIds={affectedZoneIds} />
+      <CrowdMetricsTable snapshot={snapshot} affectedZoneIds={affectedZoneIds} />
     </section>
   );
 }

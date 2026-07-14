@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { AppShell } from "@/components/layout/AppShell";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { VolunteerAssistantClient } from "@/components/volunteer/VolunteerAssistantClient";
+import "../assistant.css";
+import "./volunteer.css";
 
 export const metadata: Metadata = {
   title: "Volunteer Assistant",

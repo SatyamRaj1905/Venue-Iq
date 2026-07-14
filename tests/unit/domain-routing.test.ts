@@ -135,6 +135,15 @@ const preferenceGraph: StadiumGraph = {
   ],
 };
 
+const equalCostGraph: StadiumGraph = {
+  ...preferenceGraph,
+  edges: preferenceGraph.edges.map((edge) => ({
+    ...edge,
+    distanceMeters: 20,
+    baselineCrowd: 0.2,
+  })),
+};
+
 describe("stadium graph and routing", () => {
   it("contains only valid node, edge, and zone references", () => {
     expect(validateStadiumGraph(STADIUM_GRAPH)).toEqual({ valid: true, errors: [] });
@@ -232,6 +241,115 @@ describe("stadium graph and routing", () => {
     );
 
     expect(route.edgeIds).toContain("ramp-north--upper-north");
+  });
+
+  it("preserves exact deterministic paths across routing conditions", () => {
+    const cases = [
+      {
+        request: { originId: "gate-a", destinationId: "section-214" },
+        expectedEdges: [
+          "gate-a--north",
+          "north--stairs-north",
+          "stairs-north--upper-north",
+          "upper-north--section-214",
+        ],
+      },
+      {
+        request: {
+          originId: "gate-a",
+          destinationId: "section-214",
+          preferences: { stepFree: true },
+        },
+        expectedEdges: [
+          "gate-a--north",
+          "north--lift-north",
+          "lift-north--upper-north",
+          "upper-north--section-214",
+        ],
+      },
+      {
+        request: {
+          originId: "gate-a",
+          destinationId: "section-214",
+          preferences: { stepFree: true },
+          conditions: { closedEdgeIds: ["lift-north--upper-north"] },
+        },
+        expectedEdges: [
+          "gate-a--north",
+          "north--ramp-north",
+          "ramp-north--upper-north",
+          "upper-north--section-214",
+        ],
+      },
+      {
+        request: {
+          originId: "gate-a",
+          destinationId: "section-214",
+          preferences: { stepFree: true, avoidAccessibilityObstructions: true },
+          conditions: { obstructedEdgeIds: ["lift-north--upper-north"] },
+        },
+        expectedEdges: [
+          "gate-a--north",
+          "north--ramp-north",
+          "ramp-north--upper-north",
+          "upper-north--section-214",
+        ],
+      },
+    ] as const;
+
+    for (const routeCase of cases) {
+      expect(successfulRoute(findRoute(STADIUM_GRAPH, routeCase.request)).edgeIds).toEqual(
+        routeCase.expectedEdges,
+      );
+    }
+  });
+
+  it("uses stable node and edge tie-breaking for equal-cost paths", () => {
+    const route = successfulRoute(
+      findRoute(equalCostGraph, { originId: "start", destinationId: "finish" }),
+    );
+
+    expect(route.nodeIds).toEqual(["start", "quiet", "finish"]);
+    expect(route.edgeIds).toEqual(["long-quiet-1", "long-quiet-2"]);
+  });
+
+  it("processes a repeated indexed routing batch deterministically", () => {
+    const requests = [
+      { originId: "gate-a", destinationId: "section-214" },
+      { originId: "gate-d", destinationId: "section-305" },
+      {
+        originId: "gate-a",
+        destinationId: "section-214",
+        preferences: { stepFree: true, avoidCrowds: true },
+      },
+      {
+        originId: "gate-a",
+        destinationId: "section-214",
+        preferences: { stepFree: true },
+        conditions: { closedEdgeIds: ["lift-north--upper-north"] },
+      },
+      {
+        originId: "gate-b",
+        destinationId: "medical-east",
+        conditions: { closedNodeIds: ["concourse-south"] },
+      },
+    ] as const;
+    const expectedSignatures = requests.map((request) => {
+      const result = findRoute(STADIUM_GRAPH, request);
+      return result.found ? result.route.edgeIds.join("|") : result.reason;
+    });
+    let completedRoutes = 0;
+
+    for (let repetition = 0; repetition < 200; repetition += 1) {
+      requests.forEach((request, index) => {
+        const result = findRoute(STADIUM_GRAPH, request);
+        const signature = result.found ? result.route.edgeIds.join("|") : result.reason;
+        expect(signature).toBe(expectedSignatures[index]);
+        completedRoutes += 1;
+      });
+    }
+
+    expect(completedRoutes).toBe(1_000);
   });
 
   it("returns a typed no-route result when every step-free ascent is unavailable", () => {

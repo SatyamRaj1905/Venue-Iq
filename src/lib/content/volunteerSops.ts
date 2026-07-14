@@ -1,7 +1,8 @@
+import type { VolunteerRole, VolunteerTopic } from "@/lib/domain/constants";
 import type { SupportedLanguage } from "./languageOptions";
 
-export type VolunteerRole = "wayfinding" | "accessibility" | "guest-services" | "transport";
-export type SopTopic = "accessible-entry" | "lost-person" | "medical" | "transport" | "crowd";
+export type { VolunteerRole } from "@/lib/domain/constants";
+export type SopTopic = VolunteerTopic;
 
 export interface VolunteerOption<T extends string> {
   value: T;

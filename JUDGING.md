@@ -4,11 +4,11 @@ This guide maps each judging parameter to implementation evidence and a quick ve
 
 ## Code quality
 
-**Evidence:** Strict TypeScript flags, thin route composition, reusable UI, pure deterministic modules, discriminated async states, static content separation, named exports, and no `any`/`@ts-ignore` policy.
+**Evidence:** Strict TypeScript flags, thin route composition, role-scoped AI modules, canonical domain identifiers, reusable UI, pure deterministic modules, discriminated network states, runtime-validated client responses, named exports, and a no-`any`/no-`@ts-ignore` policy. ESLint permanently caps production complexity at 12, functions at 80 lines, and files at 500 nonblank lines with no module exceptions.
 
 **Source:** `tsconfig.json`, `eslint.config.mjs`, `src/app`, `src/components`, `src/lib/domain`, `src/lib/ai`.
 
-**Tests/docs:** `tests/unit`, `tests/components`, `ARCHITECTURE.md`.
+**Tests/docs:** `tests/unit`, `tests/components`, `ARCHITECTURE.md`; fallback-adapter parity, prompt-size, graph-integrity, cache, and malformed-response tests protect the refactored boundaries.
 
 **Verify:** `npm run format:check && npm run lint && npm run type-check`.
 
@@ -24,17 +24,17 @@ This guide maps each judging parameter to implementation evidence and a quick ve
 
 ## Efficiency
 
-**Evidence:** Server Components by default, isolated interactive clients, custom SVG map and charts, no remote fonts/assets or heavy map/chart dependency, local scenario changes instead of polling, memoized derived data, cancellable requests, and reduced-motion CSS.
+**Evidence:** Server Components by default, isolated interactive clients, custom SVG map and charts, no remote fonts/assets or heavy map/chart dependency, route-scoped CSS, lazy response-schema loading, cancellable stale requests, bounded warm-instance caches, indexed graph queries, and binary-heap Dijkstra routing in `O((V + E) log V)`. Seeded scenarios update locally without polling.
 
-**Source:** `src/app`, `src/components/fan/StadiumMap.tsx`, operations visual components, `src/app/globals.css`, `package.json`.
+**Source:** `src/app`, `src/components`, `src/lib/domain/routing.ts`, `src/lib/domain/stadiumGraph.ts`, `src/lib/http/postJson.ts`, `src/lib/ai/service`, `scripts/check-bundle-budget.mjs`, `package.json`.
 
-**Tests/docs:** Browser/mobile tests; performance section in `README.md`.
+**Tests/docs:** Browser/mobile tests and enforced route budgets in `PERFORMANCE.md`.
 
-**Verify:** Run a production build, inspect route bundle output and Network requests, then audit the deployed preview with Lighthouse.
+**Verify:** Run `npm run build && npm run bundle:check`, inspect Network requests, then audit the deployed preview with Lighthouse.
 
 ## Testing
 
-**Evidence:** Unit coverage for routing and operational math, schema/fallback tests, interactive component tests, API/health contracts, ten primary E2E journeys, and four axe scans. CI performs every gate without a live model key.
+**Evidence:** 181 unit, component, and integration checks cover routing, graph integrity, operational math, schemas, prompt budgets, caches, fallbacks, client transport failures, and API contracts. Ten primary E2E journeys and four axe scans complete the 195-check release gate. CI performs every gate without a live model key.
 
 **Source:** `tests`, `vitest.config.mts`, `playwright.config.ts`, `.github/workflows/ci.yml`.
 
@@ -46,7 +46,7 @@ This guide maps each judging parameter to implementation evidence and a quick ve
 
 **Evidence:** Skip link, landmarks, labels, keyboard controls, 44px targets, visible focus, text-plus-icon states, polite live regions, route list alternative, Arabic RTL, large-text/high-contrast preferences, responsive reflow, and reduced motion.
 
-**Source:** shared layout/UI components, `src/components/fan`, `src/components/operations`, `src/components/volunteer`, `src/app/globals.css`.
+**Source:** shared layout/UI components, `src/components/fan`, `src/components/operations`, `src/components/volunteer`, and the shared/route-scoped styles in `src/app`.
 
 **Tests/docs:** `tests/accessibility`, keyboard/mobile E2E cases, `ACCESSIBILITY.md`.
 

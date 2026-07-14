@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   DEFAULT_SIMULATION_SEED,
+  SCENARIO_IDS,
   SCENARIO_DEFINITIONS,
   STADIUM_GRAPH,
   advanceSimulation,
@@ -15,16 +16,17 @@ import {
 
 describe("seeded operations simulation", () => {
   it("defines all eight required scenarios", () => {
-    expect(SCENARIO_DEFINITIONS.map((scenario) => scenario.id)).toEqual([
-      "normal",
-      "arrival-surge",
-      "gate-closure",
-      "train-disruption",
-      "heat-alert",
-      "medical-response",
-      "accessibility-obstruction",
-      "waste-overflow",
-    ]);
+    expect(SCENARIO_DEFINITIONS.map((scenario) => scenario.id)).toEqual(SCENARIO_IDS);
+  });
+
+  it("constructs a deterministic state for every canonical scenario", () => {
+    for (const scenarioId of SCENARIO_IDS) {
+      const first = getScenarioState(scenarioId, 50);
+      const second = getScenarioState(scenarioId, 50);
+
+      expect(first.scenarioId).toBe(scenarioId);
+      expect(first).toEqual(second);
+    }
   });
 
   it("validates scenario ids", () => {

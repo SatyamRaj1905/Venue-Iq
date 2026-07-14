@@ -6,6 +6,7 @@ import {
   MAX_AI_REQUEST_BYTES,
   validateJsonRequest,
 } from "@/lib/security/requestValidation";
+import { getServerEnvironment, resetServerEnvironmentForTests } from "@/lib/config/env.server";
 import {
   checkAiRateLimit,
   RateLimitUnavailableError,
@@ -16,6 +17,7 @@ import { isTrustedRequestOrigin } from "@/lib/security/trustedOrigin";
 const schema = z.object({ message: z.string().max(20) }).strict();
 afterEach(() => {
   vi.unstubAllEnvs();
+  resetServerEnvironmentForTests();
   resetLocalRateLimitForTests();
 });
 
@@ -102,6 +104,19 @@ describe("AI request security", () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("NEXT_PUBLIC_APP_URL", "https://venue.example");
     expect(isTrustedRequestOrigin(new Request("https://venue.example/api"))).toBe(false);
+  });
+
+  it("reuses parsed configuration until an environment value changes", () => {
+    vi.stubEnv("NODE_ENV", "test");
+    vi.stubEnv("AI_DEMO_MODE", "true");
+    const first = getServerEnvironment();
+
+    expect(getServerEnvironment()).toBe(first);
+
+    vi.stubEnv("AI_DEMO_MODE", "false");
+    const changed = getServerEnvironment();
+    expect(changed).not.toBe(first);
+    expect(changed.aiDemoMode).toBe(false);
   });
 
   it("enforces the local request budget", async () => {

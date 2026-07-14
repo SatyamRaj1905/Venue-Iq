@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { FanAssistanceResponse, FanAssistRequest, SuccessEnvelope } from "@/lib/ai/schemas";
 import { createFanFallback } from "@/lib/content/fanFallback";
 import type { SupportedLanguage } from "@/lib/content/languageOptions";
+import { postJson, type PostJsonFailure, type RuntimeSchema } from "@/lib/http/postJson";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { scenarioOptions } from "@/lib/content/scenarioOptions";
@@ -23,18 +24,40 @@ const initialPreferences: FanPreferences = {
   avoidAccessibilityObstructions: true,
 };
 
-function fallbackMessage(status: number): { title: string; detail: string } {
-  if (status === 429) {
+async function loadFanEnvelopeSchema(): Promise<
+  RuntimeSchema<SuccessEnvelope<FanAssistanceResponse>>
+> {
+  const { fanAssistanceResponseSchema, successEnvelopeSchema } = await import("@/lib/ai/schemas");
+  return successEnvelopeSchema(fanAssistanceResponseSchema);
+}
+
+function fallbackMessage(failure: PostJsonFailure): { title: string; detail: string } {
+  if (failure.kind === "http-error" && failure.status === 429) {
     return {
       title: "Request limit reached",
       detail: "The live assistant is taking a short pause.",
     };
   }
-  if (status >= 500) {
+  if (failure.kind === "http-error" && failure.status >= 500) {
     return {
       title: "Gemini is temporarily unavailable",
       detail: "The grounded routing tools are still available.",
     };
+  }
+  if (failure.kind === "timeout") {
+    return {
+      title: "The assistant took too long",
+      detail: "The request was safely cancelled after 14 seconds.",
+    };
+  }
+  if (failure.kind === "network-error") {
+    const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
+    return isOffline
+      ? { title: "You appear to be offline", detail: "Reconnect to refresh live context." }
+      : {
+          title: "Network connection interrupted",
+          detail: "Live venue guidance could not be reached.",
+        };
   }
   return {
     title: "The live response could not be validated",
@@ -53,6 +76,68 @@ function responseAnnouncement(state: FanResponseState): string {
     case "fallback":
       return `The live assistant is unavailable. Safe deterministic guidance is ready in ${state.response.language}.`;
   }
+}
+
+interface FanCompanionViewProps {
+  readonly scenario: FanAssistRequest["scenario"];
+  readonly activeScenario: string;
+  readonly currentLocation: string;
+  readonly destination: string;
+  readonly language: SupportedLanguage;
+  readonly message: string;
+  readonly preferences: FanPreferences;
+  readonly validationError: string | undefined;
+  readonly responseState: FanResponseState;
+  readonly onCurrentLocationChange: (value: string) => void;
+  readonly onDestinationChange: (value: string) => void;
+  readonly onLanguageChange: (value: SupportedLanguage) => void;
+  readonly onMessageChange: (value: string) => void;
+  readonly onPreferencesChange: (value: FanPreferences) => void;
+  readonly onSubmit: () => void;
+  readonly onFollowUp: (question: string) => void;
+}
+
+function FanCompanionView(props: FanCompanionViewProps) {
+  const isLoading = props.responseState.status === "loading";
+  return (
+    <div className="stack">
+      <div className="shared-scenario">
+        <Badge tone={props.scenario === "normal" ? "positive" : "warning"}>
+          Shared scenario: {props.activeScenario}
+        </Badge>
+        <span>Synced with Operations Command Center</span>
+      </div>
+      <div className="fan-workspace">
+        <Card className="fan-form-card" padding="large">
+          <AssistanceForm
+            currentLocation={props.currentLocation}
+            destination={props.destination}
+            language={props.language}
+            message={props.message}
+            preferences={props.preferences}
+            isLoading={isLoading}
+            validationError={props.validationError}
+            onCurrentLocationChange={props.onCurrentLocationChange}
+            onDestinationChange={props.onDestinationChange}
+            onLanguageChange={props.onLanguageChange}
+            onMessageChange={props.onMessageChange}
+            onPreferencesChange={props.onPreferencesChange}
+            onSubmit={props.onSubmit}
+          />
+        </Card>
+        <p className="sr-only" aria-live="polite" aria-atomic="true">
+          {responseAnnouncement(props.responseState)}
+        </p>
+        <div className="fan-results" aria-busy={isLoading}>
+          <FanResponsePanel
+            state={props.responseState}
+            onRetry={props.onSubmit}
+            onFollowUp={props.onFollowUp}
+          />
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export function FanCompanionClient() {
@@ -85,50 +170,28 @@ export function FanCompanionClient() {
     setValidationError(undefined);
     setResponseState({ status: "loading" });
     const request = buildRequest();
-    const controller = new AbortController();
-    const timeout = window.setTimeout(() => controller.abort(), 14_000);
 
-    try {
-      const response = await fetch("/api/ai/assist", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(request),
-        signal: controller.signal,
-      });
-
-      if (!response.ok) {
-        const copy = fallbackMessage(response.status);
-        setResponseState({
-          status: "fallback",
-          response: createFanFallback(request),
-          reasonTitle: copy.title,
-          reason: copy.detail,
-        });
-        return;
-      }
-
-      const payload = (await response.json()) as SuccessEnvelope<FanAssistanceResponse>;
-      setResponseState({ status: "success", response: payload.data, mode: payload.meta.mode });
-    } catch (error: unknown) {
-      const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
-      const isTimeout = error instanceof DOMException && error.name === "AbortError";
+    const result = await postJson({
+      url: "/api/ai/assist",
+      body: request,
+      responseSchema: loadFanEnvelopeSchema,
+    });
+    if (result.ok) {
       setResponseState({
-        status: "fallback",
-        response: createFanFallback(request),
-        reasonTitle: isOffline
-          ? "You appear to be offline"
-          : isTimeout
-            ? "The assistant took too long"
-            : "Network connection interrupted",
-        reason: isOffline
-          ? "Reconnect to refresh live context."
-          : isTimeout
-            ? "The request was safely cancelled after 14 seconds."
-            : "Live venue guidance could not be reached.",
+        status: "success",
+        response: result.data.data,
+        mode: result.data.meta.mode,
       });
-    } finally {
-      window.clearTimeout(timeout);
+      return;
     }
+
+    const copy = fallbackMessage(result);
+    setResponseState({
+      status: "fallback",
+      response: createFanFallback(request),
+      reasonTitle: copy.title,
+      reason: copy.detail,
+    });
   }
 
   function submit(): void {
@@ -144,38 +207,23 @@ export function FanCompanionClient() {
     scenarioOptions.find((option) => option.id === scenario)?.label ?? scenario;
 
   return (
-    <div className="stack">
-      <div className="shared-scenario">
-        <Badge tone={scenario === "normal" ? "positive" : "warning"}>
-          Shared scenario: {activeScenario}
-        </Badge>
-        <span>Synced with Operations Command Center</span>
-      </div>
-      <div className="fan-workspace">
-        <Card className="fan-form-card" padding="large">
-          <AssistanceForm
-            currentLocation={currentLocation}
-            destination={destination}
-            language={language}
-            message={message}
-            preferences={preferences}
-            isLoading={responseState.status === "loading"}
-            validationError={validationError}
-            onCurrentLocationChange={setCurrentLocation}
-            onDestinationChange={setDestination}
-            onLanguageChange={setLanguage}
-            onMessageChange={setMessage}
-            onPreferencesChange={setPreferences}
-            onSubmit={submit}
-          />
-        </Card>
-        <p className="sr-only" aria-live="polite" aria-atomic="true">
-          {responseAnnouncement(responseState)}
-        </p>
-        <div className="fan-results" aria-busy={responseState.status === "loading"}>
-          <FanResponsePanel state={responseState} onRetry={submit} onFollowUp={handleFollowUp} />
-        </div>
-      </div>
-    </div>
+    <FanCompanionView
+      scenario={scenario}
+      activeScenario={activeScenario}
+      currentLocation={currentLocation}
+      destination={destination}
+      language={language}
+      message={message}
+      preferences={preferences}
+      validationError={validationError}
+      responseState={responseState}
+      onCurrentLocationChange={setCurrentLocation}
+      onDestinationChange={setDestination}
+      onLanguageChange={setLanguage}
+      onMessageChange={setMessage}
+      onPreferencesChange={setPreferences}
+      onSubmit={submit}
+      onFollowUp={handleFollowUp}
+    />
   );
 }
